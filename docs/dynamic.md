@@ -40,6 +40,11 @@ minimum between attempts. Window events never capture pixels synchronously.
 Sampling only applies changed colors. Explorer
 invalidations may reapply cached colors. Sampling stops when no effective
 appearance is Dynamic, the session locks, or the display turns off.
+Capture resources are created lazily per monitor and released when that
+monitor no longer needs Dynamic. This also keeps each DXGI output's duplication
+and cached strip separate. Lifetime diagnostic totals remain in the worker
+when a capture is released or Explorer is rebuilt. Multiple-display behavior
+still requires hardware validation; the current VM has one display.
 
 The first backend is BitBlt into a reused top-down DIB with GdiFlush before
 direct CPU reads. Analysis uses constant auxiliary memory and linear time.

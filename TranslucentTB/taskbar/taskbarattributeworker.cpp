@@ -344,9 +344,9 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		case 5: return m_DynamicTimer;
 		case 6: return m_DynamicLocked || m_DynamicDisplayOff;
 		case 7: return static_cast<LRESULT>(m_DynamicLastSample);
-		case 8: return static_cast<LRESULT>(m_DynamicCapture.CompletedFrames());
-		case 9: return static_cast<LRESULT>(m_DynamicCapture.Timeouts());
-		case 10: return static_cast<LRESULT>(m_DynamicCapture.Failures());
+		case 8: return static_cast<LRESULT>(m_DynamicFrames);
+		case 9: return static_cast<LRESULT>(m_DynamicTimeouts);
+		case 10: return static_cast<LRESULT>(m_DynamicFailures);
 		default: return 0;
 		}
 	}
@@ -380,7 +380,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		// Automatic background resume does not imply that a screen is on.
 		// Wait for display-on notification or interactive resume in that case.
 		m_DynamicDisplayOff = wParam == PBT_APMRESUMEAUTOMATIC;
-		m_DynamicCapture.Reset();
+		ResetDynamicCaptures();
 		UpdateDynamicTimer();
 		return TRUE;
 	}
@@ -734,11 +734,15 @@ void TaskbarAttributeWorker::RefreshAllAttributes()
 void TaskbarAttributeWorker::UpdateDynamicTimer()
 {
 	bool needed = false;
-	if (!m_DynamicLocked && !m_DynamicDisplayOff && !m_disableAttributeRefreshReply)
+	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
-		for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
+		const bool active = !m_DynamicLocked && !m_DynamicDisplayOff && !m_disableAttributeRefreshReply &&
+			GetConfig(it).Accent == AppearanceAccent::Dynamic;
+		needed |= active;
+		if (!active)
 		{
-			needed |= GetConfig(it).Accent == AppearanceAccent::Dynamic;
+			it->second.DynamicCapture.reset();
+			it->second.DynamicState.pending.reset();
 		}
 	}
 	if (needed && !m_DynamicTimer)
@@ -750,13 +754,20 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 	{
 		KillTimer(m_WindowHandle, DYNAMIC_TIMER);
 		m_DynamicTimer = false;
-		m_DynamicCapture.Reset();
-		for (auto &[monitor, info] : m_Taskbars) info.DynamicState.pending.reset();
 	}
 	if (!needed && m_DynamicFocusTimer)
 	{
 		KillTimer(m_WindowHandle, DYNAMIC_FOCUS_TIMER);
 		m_DynamicFocusTimer = false;
+	}
+}
+
+void TaskbarAttributeWorker::ResetDynamicCaptures()
+{
+	for (auto &[monitor, info] : m_Taskbars)
+	{
+		info.DynamicCapture.reset();
+		info.DynamicState.pending.reset();
 	}
 }
 
@@ -795,7 +806,18 @@ void TaskbarAttributeWorker::SampleDynamic()
 				{ bar.left, bar.top, bar.right, bar.bottom }))
 			{
 				++m_DynamicSamples;
-				result = m_DynamicCapture.Capture(*geometry, it->second.DynamicState.color);
+				// Keep each output's device/cache alive while that monitor uses Dynamic.
+				// Sharing DXGI across outputs would recreate duplication on every switch.
+				auto &capture = it->second.DynamicCapture;
+				if (!capture) capture = std::make_unique<Dynamic::Capture>();
+				const auto frames = capture->CompletedFrames();
+				const auto timeouts = capture->Timeouts();
+				const auto failures = capture->Failures();
+				result = capture->Capture(*geometry, it->second.DynamicState.color);
+				// Totals survive per-monitor capture destruction and Explorer recovery.
+				m_DynamicFrames += capture->CompletedFrames() - frames;
+				m_DynamicTimeouts += capture->Timeouts() - timeouts;
+				m_DynamicFailures += capture->Failures() - failures;
 				steps = geometry->edge == Dynamic::Edge::Bottom ? m.right - m.left : m.bottom - m.top;
 			}
 		}
@@ -1610,7 +1632,6 @@ void TaskbarAttributeWorker::ResetState(bool manual)
 		m_ForegroundWindow = Window::NullWindow;
 
 		m_Taskbars.clear();
-		m_DynamicCapture.Reset();
 		m_NormalTaskbars.clear();
 
 		m_TaskbarService = nullptr;

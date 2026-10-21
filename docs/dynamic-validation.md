@@ -8,6 +8,14 @@ Application revisions: upstream baseline
 `a6ad586fdd243f997058c79509b5328158ade6ed`; current focus-scheduling and
 capture-counter revision `a1b05b5840d48f29487fb1622091f576fb0505bb`.
 
+The current source also gives each monitor a lazy capture instance, releasing
+it when its appearance stops needing Dynamic. Previously, one shared DXGI
+instance would recreate its device/duplication each time sampling switched
+between outputs. Aggregate lifetime capture counters now survive destruction
+of those instances. This change awaits Windows build/runtime validation; the
+active resource series still uses a1b05b5 and must not be presented as measuring
+the revised worker. Multiple-display hardware is unavailable in this VM.
+
 ## Environment
 
 Windows 11 Enterprise LTSC Evaluation 24H2, build 26100.8875, two logical

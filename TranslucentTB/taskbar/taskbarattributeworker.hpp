@@ -2,6 +2,7 @@
 #include "arch.h"
 #include <array>
 #include <chrono>
+#include <memory>
 #include <member_thunk/page.hpp>
 #include <optional>
 #include <ShObjIdl.h>
@@ -57,6 +58,7 @@ private:
 		std::unordered_set<Window> MaximisedWindows;
 		std::unordered_set<Window> NormalWindows;
 		Dynamic::Stability DynamicState;
+		std::unique_ptr<Dynamic::Capture> DynamicCapture;
 	};
 
 	struct MonitorEnumInfo {
@@ -95,7 +97,6 @@ private:
 	std::unordered_map<HMONITOR, MonitorInfo> m_Taskbars;
 	std::unordered_set<Window> m_NormalTaskbars;
 	ConfigManager &m_ConfigManager;
-	Dynamic::Capture m_DynamicCapture;
 	bool m_DynamicTimer = false;
 	bool m_DynamicFocusTimer = false;
 	bool m_DynamicLocked = false;
@@ -105,12 +106,16 @@ private:
 	std::uint64_t m_DynamicSamples = 0;
 	std::uint64_t m_DynamicChanges = 0;
 	std::uint64_t m_DynamicApplications = 0;
+	std::uint64_t m_DynamicFrames = 0;
+	std::uint64_t m_DynamicTimeouts = 0;
+	std::uint64_t m_DynamicFailures = 0;
 	std::size_t m_DynamicLastLength = 0;
 	std::uint32_t m_DynamicLastRgb = 0;
 	wil::unique_hpowernotify m_DynamicDisplayHook;
 	static constexpr UINT_PTR DYNAMIC_TIMER = 0x44594E;
 	static constexpr UINT_PTR DYNAMIC_FOCUS_TIMER = 0x44594F;
 	void UpdateDynamicTimer();
+	void ResetDynamicCaptures();
 	void RequestDynamicFocusSample();
 	void SampleDynamic();
 
