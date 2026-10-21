@@ -71,8 +71,14 @@ CPU, memory and capture counters. Reproduce the scoped check using
 `Tests/dynamic/v2-check.ps1` with a fresh output directory and the reviewed
 ExplorerPatcher version. No long benchmark matrix is required.
 
-The final distribution package is checked separately for extraction, launch,
-menu selection, settings persistence and graceful exit before publication.
+The [v0.2.0 distribution](https://github.com/arturito-agent/TranslucentTB/releases/tag/dynamic-v2-v0.2.0)
+passed separate Windows extraction (107 file checksums), launch, UI menu
+selection, settings persistence through tray Exit, restart, a maximized light
+reference and final tray Exit. The exact ZIP was downloaded anonymously after
+publication and its SHA-256 matched:
+`98847b0d6e7e85b4396960652037e560a73952b82dd9cf1e8ca63739c65552c6`.
+Its bundled documentation is pinned to `3e60e61`; this publication receipt
+updates the repository documentation without changing that tested ZIP.
 Native scroll/selection hooks are implemented; the live color-update checks
 above specifically exercised title events and maximize/restore. Browser/provider
 coverage, multiple monitors and HDR were not established by this run.
