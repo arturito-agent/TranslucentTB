@@ -16,19 +16,19 @@ backgrounds; this remains a limitation.
 
 ## Sampling and selection
 
-Read a four-physical-pixel strip two physical pixels outside the actual taskbar.
+Read a one-physical-pixel line immediately outside the actual taskbar, with no gap.
 The strip spans the monitor's full width (bottom) or height (left/right). Top
 taskbars are out of scope. Invalid geometry/capture retains the last valid
 color. The appearance's Accent Color is the configurable initial fallback;
 alpha is forced to 255 in Dynamic and does not change the selected RGB.
 
-Each step groups its four pixels into fixed RGB buckets of width four per
-channel. The largest bucket wins; ties prefer the previous output's bucket,
-then the first pixel in cross-strip order. Return an actual winning pixel without averaging.
-Scan the resulting representatives for the longest contiguous equal-bucket
-run. Do not add separated runs. Ties prefer the previous output's bucket,
-then the first run. The final RGB is the actual representative at the middle of that run.
-Fixed buckets prevent drift across a gradient.
+Read each pixel directly. Group colors into fixed RGB buckets of width four per
+channel only to identify the longest contiguous similar-color run. Do not add
+separated runs. Ties prefer the previous output's bucket, then the first run.
+The final RGB is the actual pixel at the middle of that run, without averaging
+or voting across pixels perpendicular to the taskbar. Fixed buckets prevent
+drift across a gradient. A thin border or shadow directly adjoining the bar is
+intentionally eligible; interior page content no longer outvotes that border.
 
 Require at least eight steps and 1% of the edge. Require the exact candidate RGB
 on two observations at least 200 ms apart; even a one-level change inside the

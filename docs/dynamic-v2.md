@@ -6,7 +6,7 @@ The original Dynamic option remains available for comparison. JSON uses
 v2 selection resolves to an opaque fallback rather than starting capture.
 
 The selected backend is GDI. Color/geometry analysis is shared with Dynamic v1:
-a four-physical-pixel strip, two pixels outside the bottom/left/right taskbar,
+a one-physical-pixel line immediately outside the bottom/left/right taskbar,
 and the longest continuous similar-color run. The chosen RGB remains unchanged.
 
 ## Triggers and idle behavior

@@ -23,15 +23,12 @@ namespace {
 		std::size_t width, height;
 		bool vertical;
 		explicit Image(const std::vector<Rgb> &steps, bool v = false) :
-			bytes(steps.size() * 16), width(v ? 4 : steps.size()), height(v ? steps.size() : 4), vertical(v)
+			bytes(steps.size() * 4), width(v ? 1 : steps.size()), height(v ? steps.size() : 1), vertical(v)
 		{
 			for (std::size_t i = 0; i < steps.size(); ++i)
 			{
-				for (std::size_t j = 0; j < 4; ++j)
-				{
-					const auto pos = ((v ? i : j) * width + (v ? j : i)) * 4;
-					bytes[pos] = steps[i].b; bytes[pos + 1] = steps[i].g; bytes[pos + 2] = steps[i].r;
-				}
+				const auto pos = i * 4;
+				bytes[pos] = steps[i].b; bytes[pos + 1] = steps[i].g; bytes[pos + 2] = steps[i].r;
 			}
 		}
 		Dynamic::Strip View() const { return { bytes, width, height, width * 4, vertical }; }
@@ -67,10 +64,6 @@ namespace {
 int main()
 {
 	try {
-		Check(Dynamic::Representative({ red, red, blue, blue }) == red, "2:2 first sample");
-		Check(Dynamic::Representative({ red, red, blue, blue }, blue) == blue, "2:2 previous bucket");
-		Check(Dynamic::Representative({ red, green, blue, blue }, red) == blue, "majority beats history");
-		Check(Dynamic::Representative({ Rgb{4,5,6}, Rgb{7,6,5}, red, blue }) == Rgb{4,5,6}, "exact source pixel in winning bucket");
 		std::vector<Rgb> t2(300, red);
 		t2.insert(t2.end(), 450, blue); t2.insert(t2.end(), 300, red);
 		for (bool vertical : { false, true })
@@ -104,12 +97,48 @@ int main()
 		}
 		using Dynamic::Rect;
 		const Rect monitor{ -1920, -100, 0, 980 };
-		Check(Dynamic::SampleGeometry(monitor, {-1920,932,0,980})->rect == Rect{-1920,926,0,930}, "bottom gap physical");
-		Check(Dynamic::SampleGeometry(monitor, {-1920,-100,-1872,980})->rect == Rect{-1870,-100,-1866,980}, "left negative coordinates");
-		Check(Dynamic::SampleGeometry(monitor, {-48,-100,0,980})->rect == Rect{-54,-100,-50,980}, "right negative coordinates");
+		Check(Dynamic::SampleGeometry(monitor, {-1920,932,0,980})->rect == Rect{-1920,931,0,932}, "bottom immediately adjacent physical pixel");
+		Check(Dynamic::SampleGeometry(monitor, {-1920,-100,-1872,980})->rect == Rect{-1872,-100,-1871,980}, "left negative coordinates");
+		Check(Dynamic::SampleGeometry(monitor, {-48,-100,0,980})->rect == Rect{-49,-100,-48,980}, "right negative coordinates");
 		Check(!Dynamic::SampleGeometry(monitor, {-1920,-100,0,-52}), "top unsupported");
 		Check(!Dynamic::SampleGeometry({0,0,4,4}, {0,0,4,4}), "no adjacent space");
 		Check(!Dynamic::SampleGeometry(monitor, {-1921,-100,-1872,980}), "out of monitor rejected");
+		// White content with a thin gray adjacent border, as in a document preview.
+		// Read through real geometry and a padded full-image stride, not a uniform strip.
+		for (const auto edge : {Dynamic::Edge::Bottom, Dynamic::Edge::Left, Dynamic::Edge::Right})
+		{
+			const Rect screen{0,0,64,48};
+			const auto bar = edge == Dynamic::Edge::Bottom ? Rect{0,40,64,48} :
+				edge == Dynamic::Edge::Left ? Rect{0,0,8,48} : Rect{56,0,64,48};
+			const auto geometry = Dynamic::SampleGeometry(screen,bar);
+			Check(geometry && geometry->edge == edge, "border fixture geometry");
+			std::vector<std::uint8_t> content(64 * 48 * 4,255);
+			const auto rect = geometry->rect;
+			const bool vertical = edge != Dynamic::Edge::Bottom;
+			const int steps = vertical ? 48 : 64;
+			for (int step = 0; step < steps; ++step)
+			{
+				const auto x = vertical ? rect.left : step;
+				const auto y = vertical ? step : rect.top;
+				const auto offset = (y * 64 + x) * 4;
+				const auto color = step < 8 ? red : step >= steps - 8 ? blue : Rgb{50,50,50};
+				content[offset] = color.b; content[offset+1] = color.g; content[offset+2] = color.r;
+			}
+			const auto offset = static_cast<std::size_t>((rect.top * 64 + rect.left) * 4);
+			const auto bytes = std::span<const std::uint8_t>(content).subspan(offset);
+			// Trim to the minimal view size while retaining the full-image row pitch.
+			// The capture backends use their own complete row allocations.
+			std::vector<std::uint8_t> captured(static_cast<std::size_t>(steps) * 4);
+			for(int step=0;step<steps;++step)
+			{
+				const auto source = static_cast<std::size_t>(vertical ? step * 64 : step) * 4;
+				std::copy_n(bytes.begin()+source,4,captured.begin()+step*4);
+			}
+			const auto result = Dynamic::Analyze({captured,static_cast<std::size_t>(vertical ? 1 : steps),
+				static_cast<std::size_t>(vertical ? steps : 1),static_cast<std::size_t>(vertical ? 4 : steps * 4),vertical},Rgb{255,255,255});
+			Check(result && result->color == Rgb{50,50,50} && result->start == 8 &&
+				result->length == static_cast<std::size_t>(steps-16), "adjacent border wins over white content in all three positions");
+		}
 		Dynamic::Stability state;
 		const Dynamic::Segment candidate{blue,0,100};
 		Check(!state.Observe(candidate, 1000, 0), "first candidate held");

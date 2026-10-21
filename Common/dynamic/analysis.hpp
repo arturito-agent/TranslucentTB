@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -19,26 +18,6 @@ namespace Dynamic {
 			(static_cast<std::uint32_t>(c.g / 4) << 6) | (c.b / 4);
 	}
 
-	inline Rgb Representative(const std::array<Rgb, 4> &pixels,
-		std::optional<Rgb> previous = {}) noexcept
-	{
-		std::size_t winner = 0, most = 0;
-		for (std::size_t i = 0; i < pixels.size(); ++i)
-		{
-			std::size_t count = 0;
-			for (const auto c : pixels) count += Key(c) == Key(pixels[i]);
-			const bool preferred = previous && Key(pixels[i]) == Key(*previous);
-			const bool wasPreferred = previous && Key(pixels[winner]) == Key(*previous);
-			if (count > most || (count == most && preferred && !wasPreferred))
-			{
-				winner = i;
-				most = count;
-			}
-		}
-		// Return a real source pixel, never a synthesized average.
-		return pixels[winner];
-	}
-
 	struct Segment {
 		Rgb color;
 		std::size_t start = 0, length = 0;
@@ -54,13 +33,13 @@ namespace Dynamic {
 		{
 			if (width == 0 || height == 0 || width > stride / 4 ||
 				height > bytes.size() / stride) return false;
-			return vertical ? width == 4 : height == 4;
+			return vertical ? width == 1 : height == 1;
 		}
 
-		Rgb Read(std::size_t step, std::size_t cross) const noexcept
+		Rgb Read(std::size_t step) const noexcept
 		{
-			const auto x = vertical ? cross : step;
-			const auto y = vertical ? step : cross;
+			const auto x = vertical ? 0 : step;
+			const auto y = vertical ? step : 0;
 			const auto offset = y * stride + x * 4;
 			return { bytes[offset + 2], bytes[offset + 1], bytes[offset] };
 		}
@@ -80,16 +59,12 @@ namespace Dynamic {
 			const bool wasPreferred = previous && Key(best.color) == Key(*previous);
 			if (length > best.length || (length == best.length && preferred && !wasPreferred))
 			{
-				std::array<Rgb, 4> middle;
-				for (std::size_t j = 0; j < 4; ++j) middle[j] = strip.Read(start + length / 2, j);
-				best = { Representative(middle, previous), start, length };
+				best = { strip.Read(start + length / 2), start, length };
 			}
 		};
 		for (std::size_t i = 0; i < steps; ++i)
 		{
-			std::array<Rgb, 4> pixels;
-			for (std::size_t j = 0; j < 4; ++j) pixels[j] = strip.Read(i, j);
-			const auto c = Representative(pixels, previous);
+			const auto c = strip.Read(i);
 			if (length && Key(c) != key)
 			{
 				finish();

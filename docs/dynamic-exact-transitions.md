@@ -4,7 +4,20 @@ This update keeps the existing Dynamic (periodic) and Dynamic v2 (event-driven,
 Maximized window only) menu entries. This report distinguishes the current exact-color validation from historical
 v0.2.0 measurements.
 
-## Exact source color
+## Adjacent edge update (v0.3.1)
+
+Both modes now capture a one-physical-pixel line immediately adjacent to the
+actual taskbar with zero gap. The line spans the monitor's full width (bottom)
+or height (left/right); only its thickness changes. A document preview can have
+a thin dark border beside white content. The previous four-pixel strip with a
+two-pixel gap could choose that interior white instead of continuing the border.
+The new line reads the border itself. No cross-strip voting or averaging is
+needed; the longest continuous run, exact midpoint RGB, temporal confirmation,
+deduplication, schedules and transitions remain as before. Following a thin
+shadow or border is intentional. The validation and resource figures below
+refer to v0.3.0; this geometry adjustment does not establish new CPU/RAM numbers.
+
+## Exact source color (v0.3.0)
 
 Four-level RGB groups are used only to find the longest continuous similar-color
 region. Each cross-strip representative is a real winning pixel; the region's
