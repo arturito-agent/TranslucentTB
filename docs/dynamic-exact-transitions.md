@@ -17,6 +17,16 @@ deduplication, schedules and transitions remain as before. Following a thin
 shadow or border is intentional. The validation and resource figures below
 refer to v0.3.0; this geometry adjustment does not establish new CPU/RAM numbers.
 
+Native source `86aa56294d55f96a1cad93a1a07673d744b46460` passed 84 native tests
+and 2,043 portable checks in [Windows CI](https://github.com/arturito-agent/TranslucentTB/actions/runs/39685364128).
+The synthetic regression checks a thin gray border beside white content through
+Bottom, Left and Right sample geometry. Running this C++ implementation against
+the private reported screenshot selects the adjacent column's exact #323232,
+instead of the old interior white. The screenshot is not included in the repo.
+This patch did not repeat interactive taskbar/animation or resource tests in the
+VM; the existing v0.3.0 observations below retain that version's scope. The new
+ZIP is built from the verified Windows artifact and has per-file SHA-256 sums.
+
 ## Exact source color (v0.3.0)
 
 Four-level RGB groups are used only to find the longest continuous similar-color
