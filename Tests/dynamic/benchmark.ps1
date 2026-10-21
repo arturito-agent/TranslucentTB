@@ -130,6 +130,9 @@ try {
                 Start-Sleep -Milliseconds 100
             }
             $receipt = [ordered]@{label=$label;diagnostic_only=[bool]$Smoke;commit=$build.commit;executable_sha256=$build.sha256;pid=$target.Id;start_qpc=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency;warmup_seconds=$WarmupSeconds;duration_seconds=$DurationSeconds;gpu_enabled=[bool]$IncludeGpu}
+            $receipt['fixture_sha256'] = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot 'fixture.ps1')).Hash.ToLowerInvariant()
+            $receipt['fixture_animation_interval_ms'] = if($Workload -eq 'Static'){0}else{33}
+            $receipt['fixture_color_interval_ms'] = if($Workload -eq 'Static'){0}else{2000}
             $receipt | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'current-phase.json')
             $csv = Join-Path $OutputDirectory "$label.csv"
             $metricCode = "& $(Quote-PS (Join-Path $PSScriptRoot 'measure.ps1')) -Output $(Quote-PS $csv) -Label '$label' -Commit '$($build.commit)' -TargetProcessId $($target.Id) -WorkloadProcessId $($fixture.Id) -HarnessProcessId $PID -WarmupSeconds $WarmupSeconds -DurationSeconds $DurationSeconds"
@@ -141,6 +144,13 @@ try {
             $targetRows = @(Import-Csv -LiteralPath $csv | Where-Object role -eq 'target')
             if ($targetRows.Count -lt 2) { throw "Missing target endpoints: $label" }
             foreach($row in $targetRows){if($row.taskbar_edge -ne $Position){throw "Real taskbar edge changed during measurement: $label"}}
+            if($Workload -ne 'Static') {
+                $workloadRows = @(Import-Csv -LiteralPath $csv | Where-Object role -eq 'workload')
+                if($workloadRows.Count -lt 2 -or @($workloadRows | Where-Object { $_.fixture_stats_available -ne 'True' -or $_.fixture_animation_interval_ms -ne '33' }).Count) { throw "Missing continuous-workload counters: $label" }
+                $seconds=([long]$workloadRows[-1].qpc_ticks-[long]$workloadRows[0].qpc_ticks)/[double]$workloadRows[0].qpc_frequency
+                $rate=([long]$workloadRows[-1].fixture_animation_ticks-[long]$workloadRows[0].fixture_animation_ticks)/$seconds
+                if($rate -le 5 -or [long]$workloadRows[-1].fixture_paints -le [long]$workloadRows[0].fixture_paints){throw "Continuous workload did not advance adequately: $label"}
+            }
             if ($name -ne 'baseline') {
                 foreach ($row in $targetRows) {
                     if ($row.dynamic_stats_available -ne 'True' -or $row.capture_stats_available -ne 'True' -or

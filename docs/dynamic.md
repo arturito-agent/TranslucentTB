@@ -95,7 +95,21 @@ printing HRESULTs and selected colors without modifying the taskbar.
 
 `Tests/dynamic/fixture.ps1` creates only synthetic patterns. Run it in the
 interactive session; Escape closes it. Choose Vertical orientation for lateral
-taskbars. The fixture uses physical-pixel DPI awareness and keeps its display on
+taskbars. Changing content repaints a moving band on a blue/red background at
+a nominal 33ms interval; its dominant color changes every two seconds.
+Interaction continuously moves/resizes a second window, with slower focus and
+color transitions. Frame work runs in the native WinForms message loop rather
+than a PowerShell callback on every frame. Static patterns have no animation.
+Read-only fixture counters record actual animation ticks and paints separately;
+these are not a measurement of monitor presentation FPS. The collector reports
+their rates under the workload role, and full non-static suites reject a stalled
+fixture (at most five animation ticks/s or no paint progression). Inspect actual
+rates across all phases before interpreting a comparison. The receipt pins the
+fixture hash and nominal intervals. This update must be preflighted before its
+first full VM series; the already-running right/static series keeps its original
+fixture and collector without these additional counters.
+
+The fixture uses physical-pixel DPI awareness and keeps its display on
 for repeatability; `-AllowDisplaySleep` disables that test-only power request.
 Production Dynamic itself never prevents screen sleep. `measure.ps1` collects bounded process
 observations to a specified CSV after a warmup. Keep fixture, measurement

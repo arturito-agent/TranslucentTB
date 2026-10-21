@@ -42,7 +42,8 @@ def summarize(rows, diagnostic):
                          "sampled_max": max(available) if available else None,
                          "last_minus_first": values[-1]-values[0] if values[-1] is not None and values[0] is not None else None,
                          "last_quarter_median_minus_first_quarter": median(available[-quarter:])-median(available[:quarter]) if available else None}
-    for field in ("dynamic_samples", "dynamic_changes", "dynamic_applications", "captured_frames", "capture_timeouts", "capture_failures"):
+    for field in ("dynamic_samples", "dynamic_changes", "dynamic_applications", "captured_frames", "capture_timeouts", "capture_failures",
+                  "fixture_animation_ticks", "fixture_paints"):
         start, end = number(first, field), number(last, field)
         result[field + "_per_second"] = None if start is None or end is None or duration <= 0 else (end - start) / duration
     return result

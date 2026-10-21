@@ -7,7 +7,7 @@ on:
       variant:
         description: Select the application revision to build
         type: choice
-        options: [dynamic, baseline, both]
+        options: [dynamic, baseline, both, tools]
         default: dynamic
       backend:
         description: Capture backend for the Dynamic comparison build
@@ -24,6 +24,21 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate Windows PowerShell fixtures and animation counters
+        shell: powershell
+        run: |
+          & .\Tests\dynamic\fixture-check.ps1 -Output fixture-check.json
+      - name: Validate GPU summary accounting
+        shell: pwsh
+        run: |
+          python -m unittest discover -s Tests/dynamic -p test_summarize_gpu.py -v
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Exercise Windows PowerShell metric collector
+        shell: powershell
+        run: |
+          & .\Tests\dynamic\measure.ps1 -Output fixture-metrics.csv -Label SMOKE-CI-metrics -SystemOnly -WarmupSeconds 0 -DurationSeconds 1 -IntervalSeconds 1 -IncludeGpu
+          python Tests/dynamic/summarize_gpu.py fixture-metrics.csv > fixture-gpu-summary.json
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Build standalone Windows capture tools
         shell: pwsh
         run: |
@@ -42,8 +57,12 @@ jobs:
             capture-probe.exe
             dynamic-tests.exe
             Tests/dynamic/*.ps1
+            fixture-check.json
+            fixture-metrics.csv*
+            fixture-gpu-summary.json
           retention-days: 14
   build:
+    if: inputs.variant != 'tools'
     runs-on: windows-2025-vs2026
     timeout-minutes: 60
     strategy:

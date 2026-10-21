@@ -31,6 +31,7 @@ public static class DynamicMetrics {
     [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window,out Rect rect);
     [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr window);
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window,out uint pid);
     [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SendMessageTimeout(IntPtr wnd,uint msg,UIntPtr wp,IntPtr lp,uint flags,uint timeout,out UIntPtr result);
     public sealed class Counters { public double? CpuSeconds; public uint? GdiObjects,UserObjects; public string Errors=""; }
     public sealed class Taskbar { public int Left,Top,Right,Bottom;public uint Dpi;public string Edge; }
@@ -67,6 +68,11 @@ public static class DynamicMetrics {
         if(SendMessageTimeout(window,message,(UIntPtr)field,IntPtr.Zero,2,100,out result)==IntPtr.Zero) return null;
         return result.ToUInt64();
     }
+    public static IntPtr Fixture(uint expectedPid) {
+        IntPtr window=FindWindow(null,"Dynamic synthetic fixture");uint owner;
+        GetWindowThreadProcessId(window,out owner);
+        return window!=IntPtr.Zero && owner==expectedPid?window:IntPtr.Zero;
+    }
 }
 '@
 function Read-Metric([scriptblock] $Read, [string] $Name) {
@@ -79,6 +85,7 @@ function Read-Metric([scriptblock] $Read, [string] $Name) {
 $logical = [Environment]::ProcessorCount
 [DynamicMetrics]::PhysicalCoordinates()
 $message = [DynamicMetrics]::RegisterWindowMessage('TTB_QueryDynamicStats')
+$fixtureMessage = [DynamicMetrics]::RegisterWindowMessage('TTB_QueryFixtureStats')
 if (Test-Path -LiteralPath $Output) { throw 'Output already exists; choose a new measurement file' }
 $gpuOutput = $Output + '.gpu.jsonl'
 if ($IncludeGpu -and (Test-Path -LiteralPath $gpuOutput)) { throw 'GPU output already exists; choose a new measurement file' }
@@ -99,6 +106,8 @@ while ($true) {
     $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
     $supportsStats = $window -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($window,$message,255) -eq 0x44594E01
     $captureStats = $supportsStats -and ([DynamicMetrics]::Read($window,$message,254) -band 1) -ne 0
+    $fixtureWindow = [DynamicMetrics]::Fixture($WorkloadProcessId)
+    $fixtureStats = $fixtureWindow -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,255) -eq 0x46585401
     $processes = @(if ($SystemOnly) { Get-Process -Name dwm,ep_dwm_svc -ErrorAction SilentlyContinue }
                   else { Get-Process -Name TranslucentTB,explorer,dwm,ep_dwm_svc -ErrorAction SilentlyContinue })
     if ($TargetProcessId -gt 0 -and -not ($processes | Where-Object Id -eq $TargetProcessId)) { throw "Target process $TargetProcessId exited during measurement" }
@@ -112,6 +121,7 @@ while ($true) {
         $native = [DynamicMetrics]::ReadCounters($process.Id)
         if ($native.Errors) { $readErrors.Add($native.Errors) }
         $dynamic = $supportsStats -and $process.ProcessName -eq 'TranslucentTB'
+        $isFixture = $fixtureStats -and $process.Id -eq $WorkloadProcessId
         $row = [ordered]@{
             label=$Label; commit=$Commit; elapsed_seconds=$elapsed; timestamp_utc=[DateTime]::UtcNow.ToString('o')
             qpc_ticks=$qpc; qpc_frequency=[Diagnostics.Stopwatch]::Frequency
@@ -138,6 +148,11 @@ while ($true) {
             captured_frames=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,8)}else{$null})
             capture_timeouts=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,9)}else{$null})
             capture_failures=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,10)}else{$null})
+            fixture_stats_available=$isFixture
+            fixture_animation_ticks=$(if($isFixture){[DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,0)}else{$null})
+            fixture_paints=$(if($isFixture){[DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,1)}else{$null})
+            fixture_elapsed_ms=$(if($isFixture){[DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,2)}else{$null})
+            fixture_animation_interval_ms=$(if($isFixture){[DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,3)}else{$null})
             errors=($readErrors -join '|')
         }
         $rows.Add([pscustomobject]$row)
