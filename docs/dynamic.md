@@ -176,6 +176,9 @@ reported for the app and each affected process, plus their combined private
 commit; this does not sum shared working sets or measure GPU allocations.
 Bracketing estimates incremental cost; it
 does not establish causation or a statistical confidence interval.
+The output includes all fifteen absolute phase summaries and build receipts.
+Inspect these trajectories for memory retained after a candidate closes:
+adjacent-baseline subtraction does not remove that carryover.
 
 The worker accepts the registered read-only message `TTB_QueryDynamicStats`.
 Its wParam selects samples attempted (0), confirmed color changes (1), actual

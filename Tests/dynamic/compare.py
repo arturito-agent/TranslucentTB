@@ -59,6 +59,7 @@ def compare(directory, auxiliary):
     if (directory / "error.txt").exists():
         raise ValueError("Suite has an error receipt; investigate before comparing")
     phases = {}
+    receipts = {}
     setting = None
     for path in sorted(directory.glob("*.csv")):
         key, roles = load_phase(path, auxiliary)
@@ -76,6 +77,7 @@ def compare(directory, auxiliary):
         if receipt.get("label") != path.stem or any(row["commit"] != receipt.get("commit") for row in source_rows):
             raise ValueError("Receipt label/commit does not match measurement")
         phases[phase_key] = (key[-1], roles)
+        receipts[phase_key] = receipt
     if len(phases) != 15:
         raise ValueError("Expected all fifteen full phases")
     comparisons = []
@@ -119,8 +121,12 @@ def compare(directory, auxiliary):
             "limits": ["A bracketed difference estimates incremental cost; it is not a causal guarantee or confidence interval.",
                        "Combined CPU includes target, Explorer, DWM and a taskbar helper when present; workload, harness and observers remain separate.",
                        "Private-memory differences use each process's phase median; combined private commit excludes shared working sets and is not a measurement of GPU allocations.",
+                       "Inspect absolute phase trajectories for retained allocator/device memory after a candidate exits; bracketing does not remove carryover.",
                        "Ranges show three repetition results; negative differences are retained, not clamped."],
-            "aggregates": aggregates, "comparisons": comparisons}
+            "aggregates": aggregates, "comparisons": comparisons,
+            "phase_summaries": [{"repeat": key[0], "phase": key[1], "backend": backend,
+                                 "receipt": receipts[key], "absolute_roles": roles}
+                                for key, (backend, roles) in sorted(phases.items())]}
 
 
 def main():
