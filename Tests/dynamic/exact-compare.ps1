@@ -23,6 +23,8 @@ public static class ExactProbe {
  [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr w);
  [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr w,IntPtr dc);
  [DllImport("gdi32.dll")] static extern uint GetPixel(IntPtr dc,int x,int y);
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr w);
+ [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr w,int n);
  [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc p,IntPtr l);
  delegate bool EnumProc(IntPtr w,IntPtr l);
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr w,System.Text.StringBuilder s,int n);
@@ -69,13 +71,13 @@ try {
    Assert-Color 0xF9F6F3
    $first=Snapshot 'idle-start';Pump $(if($SidesOnly){3}else{15});$last=Snapshot 'idle-end'
    if($version -eq 'dynamic_v2' -and ($first.frames -ne $last.frames -or $last.burst -or $last.animation_timer)){throw 'Unexpected idle capture/animation'}
-   if($first.applications -ne $last.applications){throw 'Identical idle RGB reapplied'}
+   if($first.applications -ne $last.applications -or $first.classic_writes -ne $last.classic_writes){throw 'Identical idle RGB reapplied'}
    if(-not $SidesOnly){
     $first=Snapshot 'duplicate-events-start';$w=[Diagnostics.Stopwatch]::StartNew()
     while($w.Elapsed.TotalSeconds -lt 10){[ExactProbe]::NotifyWinEvent(0x800c,$form.Handle,0,0);[ExactProbe]::NotifyWinEvent(0x800b,$form.Handle,0,0);Pump 0.05}
     $last=Snapshot 'duplicate-events-end'
     if($version -eq 'dynamic_v2' -and $first.frames -ne $last.frames){throw 'Duplicate title/geometry events caused capture'}
-    if($first.applications -ne $last.applications){throw 'Identical noisy RGB reapplied'}
+    if($first.applications -ne $last.applications -or $first.classic_writes -ne $last.classic_writes){throw 'Identical noisy RGB reapplied'}
    }
    # Exercise a one-level change inside the same four-level bucket.
    $form.BackColor=Color 0xFAF6F3;$form.Text='Dynamic exact one-level update';Pump 3
@@ -113,6 +115,7 @@ try {
    $browserOwner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId($browserWindow,[ref]$browserOwner)
    $commandLine=(Get-CimInstance Win32_Process -Filter ("ProcessId="+$browserOwner)).CommandLine
    if(-not $commandLine.Contains($profile)){throw 'Refusing an unrelated browser window'}
+   [void][ExactProbe]::ShowWindow($browserWindow,3);[void][ExactProbe]::SetForegroundWindow($browserWindow)
    Pump 5;$null=Snapshot 'browser-idle';Assert-Color 0xF9F6F3
    Pump 7;$null=Snapshot 'browser-title-event';Assert-Color 0x436E99
    Pump 8;$null=Snapshot 'browser-silent-paint'
