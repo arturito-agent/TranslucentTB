@@ -52,3 +52,9 @@ only and establishes no application resource result or local VM preflight.
 new full series. Sampling stopped during warmup without a paused flag or capture
 failure. The collector aborted before writing that batch's GPU stream. This is
 failure evidence, not a passing result, complete comparison or established cause.
+
+`fixture-check-vm-1851.json` records the same workload lifecycle preflight on the
+actual Windows11 VM, without TranslucentTB running. The static scene does not
+animate; the changing/interaction scenes produce repeated paints. Native file
+transport changed line endings to CRLF; canonical LF text was matched to source.
+This is workload evidence only, not a backend/resource comparison.

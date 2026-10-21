@@ -71,8 +71,12 @@ and an actual short collector/summary on a hosted Windows Server2025 runner.
 The [fixture receipt](dynamic-results/fixture-check-ci-1851.json) records zero
 static animation ticks and53ticks per animated case over about2.5seconds.
 These are callback counts, not presented frames or VM product resource results.
-The continuous-workload update still needs a local VM preflight after the
-intermittent-stop investigation. Tool revision4fb2266 also passes the compile-only
+The separate local VM workload preflight now also passes: Uniform has zero
+animation ticks and one paint; Changing records52ticks/53paints over2553ms,
+Interaction53ticks/55paints over2573ms. The [VM receipt](dynamic-results/fixture-check-vm-1851.json)
+records the executed script hash and canonical source verification. These are
+callback counts, not presented frames or product resource results. Full
+Changing/Interaction suites and their per-phase workload-rate checks remain pending. Tool revision4fb2266 also passes the compile-only
 shell helper/INPUT layout check, all8Python analysis checks, actual short metric
 collection and2021portable checks on Windows CI; live shell/browser checks remain
 pending on the local VM.

@@ -1,0 +1,39 @@
+{
+  "checked_at_host_utc": "2026-10-21T10:00:41Z",
+  "environment": "Existing Windows 11 VM, build26100.8875,2vCPU,6GiB,1280x800,100%SDR",
+  "scope": "Synthetic workload preflight; no TranslucentTB instance running",
+  "fixture_canonical_lf_sha256": "0ab53de60a4174de8c1f73147cfb7f408506eec79709bbcf8ddda49a481767f0",
+  "executed_fixture_sha256": "d5822e571c52c75737efe7c4cab1d0c5d9f93e34cc536ad9582a7ad2b5fab114",
+  "transport_note": "Native FileSystem wrote CRLF. Canonical LF text was independently matched to the source.",
+  "checks": [
+    {
+      "scenario": "Uniform",
+      "marker": 1180193793,
+      "ticks": 0,
+      "paints": 1,
+      "elapsed_ms": 2564,
+      "interval_ms": 0
+    },
+    {
+      "scenario": "Changing",
+      "marker": 1180193793,
+      "ticks": 52,
+      "paints": 53,
+      "elapsed_ms": 2553,
+      "interval_ms": 33
+    },
+    {
+      "scenario": "Interaction",
+      "marker": 1180193793,
+      "ticks": 53,
+      "paints": 55,
+      "elapsed_ms": 2573,
+      "interval_ms": 33
+    }
+  ],
+  "limits": [
+    "Callback counts are not presented-frame measurements.",
+    "This checks workload lifecycle only; it establishes no product resource budget.",
+    "Full Changing/Interaction comparisons and in-phase workload rates remain pending."
+  ]
+}

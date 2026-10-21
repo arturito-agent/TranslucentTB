@@ -7,11 +7,13 @@ param(
     [int] $WarmupSeconds = 120,
     [int] $DurationSeconds = 305,
     [switch] $Smoke,
-    [switch] $IncludeGpu
+    [ValidateRange(1,120)][int] $SmokeDurationSeconds = 5,
+    [switch] $IncludeGpu,
+    [switch] $IncludeScheduler
 )
 $ErrorActionPreference = 'Stop'
 if ($Repetitions -lt 1 -or $WarmupSeconds -lt 0 -or $DurationSeconds -lt 1) { throw 'Invalid timing' }
-if ($Smoke) { $Repetitions=1;$WarmupSeconds=2;$DurationSeconds=5 }
+if ($Smoke) { $Repetitions=1;$WarmupSeconds=2;$DurationSeconds=$SmokeDurationSeconds }
 elseif ($Repetitions -lt 3 -or $WarmupSeconds -lt 120 -or $DurationSeconds -lt 300) { throw 'Full measurements require three repeats, 120s warmup and at least 300s measured' }
 if (Get-Process TranslucentTB -ErrorAction SilentlyContinue) { throw 'Close the current instance before starting the suite' }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Choose a new output directory' }
@@ -36,13 +38,14 @@ public static class DynamicBenchmark {
     [DllImport("user32.dll")] static extern bool PostMessage(IntPtr w,uint m,IntPtr p,IntPtr l);
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string name);
     [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr w,uint m,UIntPtr p,IntPtr l,uint flags,uint timeout,out UIntPtr result);
-    public static bool WorkerReady(uint expectedPid,bool dynamic) {
+    public static bool WorkerReady(uint expectedPid,bool dynamic,bool scheduler) {
         IntPtr w=FindWindow("TTB_WorkerWindow","TTB_WorkerWindow");uint pid;
         if(w==IntPtr.Zero)return false;
         GetWindowThreadProcessId(w,out pid);if(pid!=expectedPid)return false;
         if(!dynamic)return true;
         uint m=RegisterWindowMessage("TTB_QueryDynamicStats");UIntPtr result;
         if(SendMessageTimeout(w,m,(UIntPtr)255,IntPtr.Zero,2,100,out result)==IntPtr.Zero || result.ToUInt64()!=0x44594e01)return false;
+        if(scheduler && (SendMessageTimeout(w,m,(UIntPtr)254,IntPtr.Zero,2,100,out result)==IntPtr.Zero || (result.ToUInt64()&2)==0))return false;
         if(SendMessageTimeout(w,m,(UIntPtr)6,IntPtr.Zero,2,100,out result)==IntPtr.Zero || result.ToUInt64()!=0)return false;
         return SendMessageTimeout(w,m,(UIntPtr)5,IntPtr.Zero,2,100,out result)!=IntPtr.Zero && result.ToUInt64()==1;
     }
@@ -125,7 +128,7 @@ try {
             [DynamicBenchmark]::FitFixture($fixture.Id)
             $target = Start-Process -FilePath $targetPath -WorkingDirectory (Split-Path -Parent $targetPath) -PassThru
             $readyDeadline=[Diagnostics.Stopwatch]::StartNew()
-            while(-not [DynamicBenchmark]::WorkerReady($target.Id,($name -ne 'baseline'))) {
+            while(-not [DynamicBenchmark]::WorkerReady($target.Id,($name -ne 'baseline'),[bool]$IncludeScheduler)) {
                 if($target.HasExited -or $readyDeadline.Elapsed.TotalSeconds -gt 10){throw 'Target not ready: begin with an awake, unlocked actual console'}
                 Start-Sleep -Milliseconds 100
             }
@@ -133,10 +136,12 @@ try {
             $receipt['fixture_sha256'] = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot 'fixture.ps1')).Hash.ToLowerInvariant()
             $receipt['fixture_animation_interval_ms'] = if($Workload -eq 'Static'){0}else{33}
             $receipt['fixture_color_interval_ms'] = if($Workload -eq 'Static'){0}else{2000}
+            $receipt['scheduler_enabled'] = [bool]$IncludeScheduler
             $receipt | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'current-phase.json')
             $csv = Join-Path $OutputDirectory "$label.csv"
             $metricCode = "& $(Quote-PS (Join-Path $PSScriptRoot 'measure.ps1')) -Output $(Quote-PS $csv) -Label '$label' -Commit '$($build.commit)' -TargetProcessId $($target.Id) -WorkloadProcessId $($fixture.Id) -HarnessProcessId $PID -WarmupSeconds $WarmupSeconds -DurationSeconds $DurationSeconds"
             if ($IncludeGpu) { $metricCode += ' -IncludeGpu' }
+            if ($IncludeScheduler) { $metricCode += ' -IncludeScheduler' }
             if ($name -ne 'baseline') { $metricCode += ' -RequireDynamic' }
             $collector = Start-Script $metricCode
             if (-not $collector.WaitForExit(($WarmupSeconds+$DurationSeconds+30)*1000) -or $collector.ExitCode -ne 0) { throw "Collector failed: $label" }

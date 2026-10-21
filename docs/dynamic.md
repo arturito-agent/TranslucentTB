@@ -182,6 +182,12 @@ an orchestration check. Normal mode requires 120s warmup and at least 300s
 measured per phase. Explorer is restarted identically before every phase because
 the injected service remains pinned until its process exits. Keep an unrelated
 Windows desktop controller's shell/virtual-desktop references fresh afterwards.
+For the intermittent-stop investigation, `-Smoke -SmokeDurationSeconds 90
+-IncludeScheduler` keeps the same fixture-before-Explorer-restart sequence but
+observes each phase longer. Candidate builds must expose scheduler diagnostics.
+The default smoke duration remains five seconds; the bounded override accepts
+one through120seconds and cannot change normal full-measurement timing. These
+SMOKE phases remain diagnostic-only and cannot establish resource budgets.
 Lateral runs use `taskbar-position.ps1` with the reviewed ExplorerPatcher
 26100.8457.70.3 private position message. The driver checks its version/module,
 reapplies the real edge after each Explorer restart and refits the owned fixture.
