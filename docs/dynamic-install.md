@@ -22,20 +22,25 @@ TranslucentTB instance.
   [its official repository](https://github.com/valinet/ExplorerPatcher/releases).
   This fork does not install or bundle ExplorerPatcher.
 
-## Enable Dynamic
+## Enable Dynamic v2
 
 1. Exit any other TranslucentTB instance from its tray menu.
 2. Run `TranslucentTB.exe` as the ordinary desktop user.
-3. Open its tray menu and choose **Desktop → Dynamic**. Each existing appearance
-   state has its own Dynamic option; enabled states and application rules keep
-   their normal precedence. For example, **Desktop → Dynamic** with
-   **Maximized window → Clear** captures only while Dynamic is effective.
-4. **Fallback color** sets the initial color used until a reliable sample is
-   confirmed. Dynamic uses an opaque background and ignores fallback alpha.
-5. Move or change the content next to the taskbar. The longest continuous color
-   segment beside the bar determines its color; separated segments are not
-   added together. Sampling runs at a limited cadence, so changes take a short
-   time to settle.
+3. Open its tray menu, select **Maximized window → Enabled**, and choose
+   **Dynamic v2** in that same submenu. It is available only in this state.
+4. Keep **Desktop** on a fixed appearance such as Clear. Other enabled states
+   (Start, Search, Task View, Battery saver) retain their normal precedence.
+5. Maximize a window or switch between maximized windows. A short capture burst
+   selects the color next to the taskbar; afterward the capture timer stops.
+6. **Fallback color** sets the initial opaque color until a reliable sample
+   is confirmed. Closing/restoring the maximized window returns to the normal
+   configured appearance.
+
+The original **Dynamic** option remains available and still samples periodically.
+To test the new event-driven behavior, select **Dynamic v2** explicitly. Scroll,
+selection and title notifications depend on the application; automatic content
+or video changes may retain the previous color until another supported event.
+See [Dynamic v2 behavior](dynamic-v2.md).
 
 The same appearance supports bottom, left and right taskbars. Use the taskbar
 position controls provided by the configured Windows/ExplorerPatcher setup;
