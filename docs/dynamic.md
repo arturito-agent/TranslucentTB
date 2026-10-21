@@ -46,6 +46,10 @@ branch with the same runner family and configuration, then uploads test output
 and Windows artifacts. It does not sign or publish installers. Runner/image and
 dependency revisions must be retained with measurements.
 
+Pushes build Dynamic; manual dispatch can select `baseline` or `both`. MSBuild
+runs serially to avoid C++/WinRT's parallel dependency computation cycle, which
+was also observed on the untouched upstream baseline.
+
 The platform-independent geometry, run-selection and stability tests also run
 without Windows or third-party dependencies:
 

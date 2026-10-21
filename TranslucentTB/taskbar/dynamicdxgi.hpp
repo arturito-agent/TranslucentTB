@@ -82,7 +82,7 @@ namespace Dynamic {
 			}
 			DXGI_OUTDUPL_FRAME_INFO info{};
 			Ptr<IDXGIResource> resource;
-			m_Error = m_Duplication->AcquireNextFrame(0, &info, &resource);
+			m_Error = m_Duplication->AcquireNextFrame(16, &info, &resource);
 			if (m_Error == DXGI_ERROR_WAIT_TIMEOUT)
 			{
 				// Reuse only a result from the identical geometry AND tie-break state.

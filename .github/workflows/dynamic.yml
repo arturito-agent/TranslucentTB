@@ -3,6 +3,12 @@ on:
   push:
     branches: [feature/dynamic]
   workflow_dispatch:
+    inputs:
+      variant:
+        description: Select the application revision to build
+        type: choice
+        options: [dynamic, baseline, both]
+        default: dynamic
 
 permissions:
   contents: read
@@ -38,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [baseline, dynamic]
+        variant: ${{ fromJSON(inputs.variant == 'both' && '["baseline","dynamic"]' || inputs.variant == 'baseline' && '["baseline"]' || '["dynamic"]') }}
     env:
       VCPKG_BINARY_SOURCES: clear
     steps:
@@ -62,7 +68,7 @@ jobs:
       - name: Build Release x64
         shell: pwsh
         run: |
-          msbuild TranslucentTB.slnx /m:2 /p:Configuration=Release /p:Platform=x64 /p:BuildType=Dev /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /v:minimal
+          msbuild TranslucentTB.slnx /m:1 /p:BuildInParallel=false /p:Configuration=Release /p:Platform=x64 /p:BuildType=Dev /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /v:minimal
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Run upstream and configuration tests
         shell: pwsh
