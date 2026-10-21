@@ -167,7 +167,35 @@ with an empty taskbar map and stopped timer before recovery. The first newly
 completed frame is observed about 32.0 seconds after the pre-restart snapshot,
 versus 5.8 seconds for GDI. These are single recovery trials with about one-second
 observation intervals, not latency percentiles or evidence of the cause of the
-original unavailable query. Recovery at left/bottom remains in progress.
+original unavailable query.
+
+The parameterized recovery tool also passes on the actual left classic taskbar
+with both backends, preserving (0,0)..(62,800) geometry at 96 DPI and confirming
+exact blue rendering, resumed attempts/new frames and graceful exits. First
+new frames are observed about 5.8s GDI and 4.7s DXGI after their pre-restart
+snapshots. These remain single trials; the earlier 32s right DXGI observation
+is retained rather than generalized to all DXGI recovery. See the
+[left GDI](dynamic-results/explorer-recovery-left-gdi-753a.json) and
+[left DXGI](dynamic-results/explorer-recovery-left-dxgi-753a.json) receipts.
+Bottom recovery fails on GDI 753ad89: the real (0,760)..(1280,800) bar remains
+visible with the old blue pixel, but the worker finishes with an empty map,
+timer=0, paused=0 and 45 unchanged attempts/frames. This is a real failure;
+the prior pixel alone would hide it. The driver closes its app/fixture and
+restores configuration; DXGI is not run after that failure. The
+[failed receipt](dynamic-results/explorer-recovery-bottom-gdi-753a-failed.json)
+is retained. A later read-only query finds the classic taskbar children and
+ExplorerPatcher module with no Taskbar.dll loaded, but this does not establish
+the exact transient detection reason at the earlier worker reset.
+
+The proposed source fix performs at most five delayed discovery retries after
+an empty-map reset when an enabled appearance/rule can use Dynamic. Delays are
+0.5, 1, 2, 4 and 8 seconds; real shell/resume events can begin a new bounded
+sequence. Discovery is canceled once the map is populated, all Dynamic options
+are disabled, the display/session pauses or the app exits. It adds no steady
+capture-rate increase or permanent watchdog. Scalar diagnostics distinguish
+actual recovery attempts from a coincidental subsequent shell event. This
+source change still requires both Windows builds and actual VM validation;
+no claim of repaired recovery or completed resource budgets follows yet.
 
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests

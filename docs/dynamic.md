@@ -339,6 +339,18 @@ still skips the critical section. Actual lock, display-off and inactive
 appearances retain their stop behavior. This removes the demonstrated transient
 teardown path; the spontaneous long-series stop still needs validation.
 
+Capability bit 2 adds bounded-discovery diagnostics: fields 22..26 are lifetime
+discovery retry requests, queued retry timer, current retry-attempt count, last
+discovery-timer creation error and its lifetime failure count. `recovery.ps1`
+records these only when advertised. No periodic metric writer is added to the
+application. Current source uses a separate one-shot discovery timer only when
+the taskbar map is empty and an enabled appearance/rule can use Dynamic. It
+backs off through 0.5, 1, 2, 4 and 8 seconds, then stops until another relevant
+shell/resume event. Successful discovery cancels it; display-off/session-lock
+pause it, and disabling all Dynamic options or exiting cancels it. Ordinary
+capture timing stays unchanged. The bottom recovery failure that motivated
+this change is retained in the validation notes; the repair is not yet validated.
+
 `refresh-race.ps1 -PolicyRecompute` covers that overlap through the actual worker
 message handler. It sends a synthetic WTS unlock notification while beginning
 already unlocked; it never locks/unlocks the real session and does not establish

@@ -103,6 +103,12 @@ private:
 	bool m_DynamicDisplayOff = false;
 	bool m_DynamicSampling = false;
 	bool m_DynamicStopping = false;
+	bool m_DynamicRecoveryTimer = false;
+	unsigned m_DynamicRecoveryAttempts = 0;
+	ULONGLONG m_DynamicRecoveryDue = 0;
+	std::uint64_t m_DynamicRecoveryRequests = 0;
+	DWORD m_DynamicRecoveryError = ERROR_SUCCESS;
+	std::uint64_t m_DynamicRecoveryFailures = 0;
 	ULONGLONG m_DynamicLastSample = 0;
 	std::uint64_t m_DynamicSamples = 0;
 	std::uint64_t m_DynamicChanges = 0;
@@ -123,6 +129,9 @@ private:
 	wil::unique_hpowernotify m_DynamicDisplayHook;
 	static constexpr UINT_PTR DYNAMIC_TIMER = 0x44594E;
 	static constexpr UINT_PTR DYNAMIC_FOCUS_TIMER = 0x44594F;
+	static constexpr UINT_PTR DYNAMIC_RECOVERY_TIMER = 0x445950;
+	bool HasConfiguredDynamic() const;
+	void UpdateDynamicRecoveryTimer();
 	void UpdateDynamicTimer();
 	std::uint32_t DynamicSchedulerFlags() const noexcept;
 	void ResetDynamicCaptures();
@@ -322,7 +331,7 @@ public:
 	}
 
 	void DumpState();
-	void ResetState(bool manual = false);
+	void ResetState(bool manual = false, bool dynamicRecoveryRetry = false);
 
 	TaskbarType GetType() noexcept
 	{

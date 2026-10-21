@@ -1,4 +1,5 @@
 #include "taskbarattributeworker.hpp"
+#include <algorithm>
 #include <functional>
 #include <member_thunk/member_thunk.hpp>
 #include <set>
@@ -298,7 +299,9 @@ LRESULT TaskbarAttributeWorker::OnPowerBroadcast(const POWERBROADCAST_SETTING *s
 {
 	if (settings && settings->PowerSetting == GUID_CONSOLE_DISPLAY_STATE && settings->DataLength == sizeof(DWORD))
 	{
+		const bool wasDisplayOff = m_DynamicDisplayOff;
 		m_DynamicDisplayOff = *reinterpret_cast<const DWORD *>(&settings->Data) == 0;
+		if (wasDisplayOff && !m_DynamicDisplayOff) m_DynamicRecoveryAttempts = 0;
 		UpdateDynamicTimer();
 	}
 	if (settings && settings->PowerSetting == GUID_POWER_SAVING_STATUS && settings->DataLength == sizeof(DWORD))
@@ -336,7 +339,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		switch (wParam)
 		{
 		case 255: return 0x44594E01; // Distinguish missing telemetry from valid zero counts.
-		case 254: return 3; // Capture counters and opt-in scheduler diagnostics.
+		case 254: return 7; // Capture, scheduler and bounded discovery diagnostics.
 		case 0: return static_cast<LRESULT>(m_DynamicSamples);
 		case 1: return static_cast<LRESULT>(m_DynamicChanges);
 		case 2: return static_cast<LRESULT>(m_DynamicApplications);
@@ -359,8 +362,27 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		case 19: return static_cast<LRESULT>(m_ConfigManager.GetConfig().DesktopAppearance.Accent);
 		case 20: return static_cast<LRESULT>(m_DynamicStops);
 		case 21: return static_cast<LRESULT>(m_DynamicTimerFailures);
+		case 22: return static_cast<LRESULT>(m_DynamicRecoveryRequests);
+		case 23: return m_DynamicRecoveryTimer;
+		case 24: return m_DynamicRecoveryAttempts;
+		case 25: return m_DynamicRecoveryError;
+		case 26: return static_cast<LRESULT>(m_DynamicRecoveryFailures);
 		default: return 0;
 		}
+	}
+	if (uMsg == WM_TIMER && wParam == DYNAMIC_RECOVERY_TIMER)
+	{
+		// KillTimer can leave an old WM_TIMER queued. Ignore an early delivery
+		// belonging to the previous discovery attempt.
+		if (m_DynamicRecoveryTimer && GetTickCount64() >= m_DynamicRecoveryDue)
+		{
+			KillTimer(m_WindowHandle, DYNAMIC_RECOVERY_TIMER);
+			m_DynamicRecoveryTimer = false;
+			++m_DynamicRecoveryAttempts;
+			++m_DynamicRecoveryRequests;
+			ResetState(false, true);
+		}
+		return 0;
 	}
 	if (uMsg == WM_TIMER && wParam == DYNAMIC_TIMER)
 	{
@@ -377,7 +399,11 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 	if (uMsg == WM_WTSSESSION_CHANGE)
 	{
 		if (wParam == WTS_SESSION_LOCK) m_DynamicLocked = true;
-		else if (wParam == WTS_SESSION_UNLOCK) m_DynamicLocked = false;
+		else if (wParam == WTS_SESSION_UNLOCK)
+		{
+			if (m_DynamicLocked) m_DynamicRecoveryAttempts = 0;
+			m_DynamicLocked = false;
+		}
 		UpdateDynamicTimer();
 		return 0;
 	}
@@ -392,6 +418,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		// Automatic background resume does not imply that a screen is on.
 		// Wait for display-on notification or interactive resume in that case.
 		m_DynamicDisplayOff = wParam == PBT_APMRESUMEAUTOMATIC;
+		if (!m_DynamicDisplayOff) m_DynamicRecoveryAttempts = 0;
 		ResetDynamicCaptures();
 		UpdateDynamicTimer();
 		return TRUE;
@@ -741,6 +768,9 @@ void TaskbarAttributeWorker::RefreshAllAttributes()
 	{
 		refresher.refresh(it);
 	}
+	// Configuration changes also need to cancel/start discovery when no
+	// taskbar has been identified yet; there are no attributes to refresh.
+	if (m_Taskbars.empty()) UpdateDynamicRecoveryTimer();
 }
 
 std::uint32_t TaskbarAttributeWorker::DynamicSchedulerFlags() const noexcept
@@ -792,6 +822,59 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 	{
 		KillTimer(m_WindowHandle, DYNAMIC_FOCUS_TIMER);
 		m_DynamicFocusTimer = false;
+	}
+	UpdateDynamicRecoveryTimer();
+}
+
+bool TaskbarAttributeWorker::HasConfiguredDynamic() const
+{
+	const auto &config = m_ConfigManager.GetConfig();
+	if (config.DesktopAppearance.Accent == AppearanceAccent::Dynamic) return true;
+	for (const auto *appearance : { &config.StartOpenedAppearance, &config.SearchOpenedAppearance,
+		&config.TaskViewOpenedAppearance, &config.BatterySaverAppearance })
+	{
+		if (appearance->Enabled && appearance->Accent == AppearanceAccent::Dynamic) return true;
+	}
+	for (const auto *appearance : { &config.VisibleWindowAppearance, &config.MaximisedWindowAppearance })
+	{
+		if (!appearance->Enabled) continue;
+		if (appearance->Accent == AppearanceAccent::Dynamic) return true;
+		const auto dynamicRule = [](const auto &item)
+		{
+			const auto &rule = item.second;
+			return rule.Accent == AppearanceAccent::Dynamic ||
+				(rule.Inactive && rule.Inactive->Accent == AppearanceAccent::Dynamic);
+		};
+		if (std::any_of(appearance->ClassRules.begin(), appearance->ClassRules.end(), dynamicRule) ||
+			std::any_of(appearance->TitleRules.begin(), appearance->TitleRules.end(), dynamicRule) ||
+			std::any_of(appearance->FileRules.begin(), appearance->FileRules.end(), dynamicRule)) return true;
+	}
+	return false;
+}
+
+void TaskbarAttributeWorker::UpdateDynamicRecoveryTimer()
+{
+	// Explorer can announce a taskbar before its modules/windows are ready.
+	// ResetState then has an empty map, and another shell event is not assured.
+	// Retry discovery at most five times (.5,1,2,4,8s), never in steady state.
+	const bool discovered = !m_Taskbars.empty();
+	const bool configured = !m_DynamicStopping && !discovered && HasConfiguredDynamic();
+	const bool needed = configured && !m_DynamicLocked && !m_DynamicDisplayOff &&
+		!m_ResettingState && m_DynamicRecoveryAttempts < 5;
+	if (!needed && m_DynamicRecoveryTimer)
+	{
+		KillTimer(m_WindowHandle, DYNAMIC_RECOVERY_TIMER);
+		m_DynamicRecoveryTimer = false;
+	}
+	if (discovered || !configured) m_DynamicRecoveryAttempts = 0;
+	if (needed && !m_DynamicRecoveryTimer)
+	{
+		const UINT delay = 500u << m_DynamicRecoveryAttempts;
+		m_DynamicRecoveryDue = GetTickCount64() + delay;
+		SetLastError(ERROR_SUCCESS);
+		m_DynamicRecoveryTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_RECOVERY_TIMER, delay, nullptr, 50) != 0;
+		m_DynamicRecoveryError = m_DynamicRecoveryTimer ? ERROR_SUCCESS : GetLastError();
+		if (!m_DynamicRecoveryTimer) ++m_DynamicRecoveryFailures;
 	}
 }
 
@@ -1641,10 +1724,16 @@ void TaskbarAttributeWorker::DumpState()
 	MessagePrint(spdlog::level::off, L"===== End TaskbarAttributeWorker state dump =====");
 }
 
-void TaskbarAttributeWorker::ResetState(bool manual)
+void TaskbarAttributeWorker::ResetState(bool manual, bool dynamicRecoveryRetry)
 {
 	if (!m_ResettingState)
 	{
+		if (m_DynamicRecoveryTimer)
+		{
+			KillTimer(m_WindowHandle, DYNAMIC_RECOVERY_TIMER);
+			m_DynamicRecoveryTimer = false;
+		}
+		if (!dynamicRecoveryRetry) m_DynamicRecoveryAttempts = 0;
 		MessagePrint(spdlog::level::debug, L"Resetting worker state");
 
 		m_ResettingState = true;
@@ -1653,6 +1742,7 @@ void TaskbarAttributeWorker::ResetState(bool manual)
 		{
 			m_ResettingState = false;
 			m_ResetStateReentered = false;
+			UpdateDynamicRecoveryTimer();
 		});
 
 		// Clear state
@@ -1801,7 +1891,7 @@ void TaskbarAttributeWorker::ResetState(bool manual)
 		{
 			// we got re-entrancy, all this might not even be valid anymore, try it again.
 			guard.reset();
-			ResetState(manual);
+			ResetState(manual, dynamicRecoveryRetry);
 		}
 	}
 	else

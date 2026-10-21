@@ -54,6 +54,15 @@ function Snapshot([switch]$AllowUnavailable) {
  $names=@('attempts','changes','applications','rgb','length','timer','paused','last_sample_tick','frames','timeouts','failures','flags','taskbars','stop_entry_flags','stop_flags','stop_tick','stop_taskbars','stop_desktop','timer_error','desktop','stops','timer_failures')
  $row=[ordered]@{qpc=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency;pid=$target.Id;stats_available=($probe.Status -eq 'ok');protocol_status=$probe.Status;protocol_error=$probe.Error;protocol_owner=$probe.Owner;edge=$null;left=$null;top=$null;right=$null;bottom=$null;dpi=$null}
  for($i=0;$i -lt $names.Count;$i++){$value=if($probe.Status -eq 'ok'){[DynamicMetrics]::Read($w,$message,$i)}else{$null};$row[$names[$i]]=$value;if($null -eq $value){$row.stats_available=$false}}
+ $recoveryNames=@('discovery_requests','discovery_timer','discovery_attempts','discovery_error','discovery_failures')
+ foreach($name in $recoveryNames){$row[$name]=$null}
+ if($probe.Status -eq 'ok'){
+  $capabilities=[DynamicMetrics]::Read($w,$message,254)
+  if($null -eq $capabilities){$row.stats_available=$false}
+  elseif(($capabilities -band 4) -ne 0){
+   for($i=0;$i -lt $recoveryNames.Count;$i++){$value=[DynamicMetrics]::Read($w,$message,($i+22));$row[$recoveryNames[$i]]=$value;if($null -eq $value){$row.stats_available=$false}}
+  }
+ }
  if(-not $row.stats_available -and -not $AllowUnavailable){throw 'Incomplete counters after recovery'}
  $bar=[DynamicMetrics]::ReadTaskbar()
  if($bar){$row['edge']=$bar.Edge;$row['left']=$bar.Left;$row['top']=$bar.Top;$row['right']=$bar.Right;$row['bottom']=$bar.Bottom;$row['dpi']=$bar.Dpi}

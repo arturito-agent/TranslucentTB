@@ -115,3 +115,12 @@ not establish other positions or recovery scenarios.
 including 27 observations with an empty map and stopped sampler before recovery.
 The receipts retain first-observed-new-frame elapsed values, approximately
 5.8s GDI and 32.0s DXGI, with the single-trial/QPC/observer limitations stated.
+`explorer-recovery-left-{gdi,dxgi}-753a.json` records both passing left cases,
+their actual bounds, exact pixel, owned exits and first new frame observations
+(about 5.8s GDI, 4.7s DXGI). These single observations do not establish recovery
+percentiles or an API performance ranking.
+`explorer-recovery-bottom-gdi-753a-failed.json` preserves the failed bottom
+case: the real bar keeps the old blue pixel while its worker has no taskbars,
+timer=0, paused=0 and unchanged attempts/frames. It is failure evidence and
+does not establish the exact transient classification cause. DXGI was not run
+after this failure; the proposed bounded-discovery repair remains unvalidated.
