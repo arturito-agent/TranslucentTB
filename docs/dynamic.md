@@ -55,6 +55,9 @@ translated before entering Windows composition APIs.
 
 ## Build and tests
 
+See [measured build identity](dynamic-builds.md) for the exact native commits,
+compiler environment, artifact/executable hashes and rebuild commands.
+
 For activation, portable dependencies and known limitations, read
 [installation and use](dynamic-install.md). To package an extracted, verified
 Windows CI runtime after the installation instructions and evidence are

@@ -1,0 +1,71 @@
+{
+  "candidates": [
+    {
+      "backend": "GDI",
+      "run_id": 39594821980,
+      "job_id": 119204425380,
+      "image": "windows-2025-vs2026",
+      "image_version": "20261018.275.1",
+      "msvc_version": "14.51.36231",
+      "native_commit": "e4f09c8af0795a86dad562dfbea3c6225f9d9a2c",
+      "executable_sha256": "1c6e5bc37ea2c777df703580a9e8778a0b9fc4654ecb6935fb8b3530f2dc1e56",
+      "artifact_id": 12343463049,
+      "artifact_archive_sha256": "b2c2ef8b7b54edf2a6825c26a9a0268e295d8d0947b21725c07185467764e21a",
+      "native_tests_passed": 83,
+      "portable_checks_passed": 2021
+    },
+    {
+      "backend": "DXGI",
+      "run_id": 39594825202,
+      "job_id": 119204437086,
+      "image": "windows-2025-vs2026",
+      "image_version": "20261018.275.1",
+      "msvc_version": "14.51.36231",
+      "native_commit": "e4f09c8af0795a86dad562dfbea3c6225f9d9a2c",
+      "executable_sha256": "b1b2c69cb8bc46ffeb22ed5e61340519d46e211b595a3edca7900aaf284a4fcf",
+      "artifact_id": 12343882805,
+      "artifact_archive_sha256": "cee9608f7fa840e9f2dd9658ee2ee72124cd524433d932166803c6bd64c08b52",
+      "native_tests_passed": 83,
+      "portable_checks_passed": 2021
+    }
+  ],
+  "vcpkg_tool_commit": "664933b8d385dfc01f4e0cdff4c7c74e71f6a740",
+  "vcpkg_registry_baseline": "84bab45d415d22042bd0b9081aea57f362da3f35",
+  "nuget_version": "7.0.1",
+  "msbuild_version": "18.11.0.47511",
+  "configuration": "Release",
+  "build_type": "Dev",
+  "architecture": "x64",
+  "platform_toolset": "v145",
+  "language_standard": "stdcpplatest",
+  "target_sdk": "10.0.28000.0",
+  "nuget_packages": {
+    "Microsoft.Build.Tasks.Git": "10.0.401",
+    "Microsoft.SourceLink.Common": "10.0.401",
+    "Microsoft.SourceLink.GitHub": "10.0.401",
+    "Microsoft.Trusted.Signing.Client": "1.0.95",
+    "Microsoft.UI.Xaml": "2.8.7",
+    "Microsoft.Web.WebView2": "1.0.4191.47",
+    "Microsoft.Windows.CppWinRT": "3.0.260818.1",
+    "Microsoft.Windows.SDK.BuildTools": "10.0.28000.2705",
+    "Microsoft.Windows.SDK.CPP": "10.0.28000.2705",
+    "Microsoft.Windows.SDK.CPP.arm64": "10.0.28000.2705",
+    "Microsoft.Windows.SDK.CPP.x64": "10.0.28000.2705"
+  },
+  "limits": [
+    "These are exact measured native builds, not a claim that later hosted-runner images produce bit-identical executables.",
+    "BuildType Dev is an optimized Release configuration; the portable executable is unsigned and identifies as Dev."
+  ],
+  "baseline": {
+    "native_commit": "7d644774045429a98c07678df553b771e3b5d129",
+    "run_id": 39546822333,
+    "job_id": 119046761221,
+    "artifact_id": 12322840921,
+    "artifact_archive_sha256": "c8bb18d7448d58ff95aa188a8562c0a0ec8b7abaddbd705a0e7fb1ac11660f63",
+    "executable_sha256": "c61a8abcb3c21550090ae94326b7dde66a4428f059bbf9fc786720d5a35a0700",
+    "image": "windows-2025-vs2026",
+    "image_version": "20261018.275.1",
+    "msvc_version": "14.51.36231",
+    "native_tests_passed": 81
+  }
+}
