@@ -351,3 +351,5 @@ MigrationBackup/
 .vscode/
 enc_temp_folder/
 vcpkg_installed/
+# Project-local build and experiment evidence
+local-files/

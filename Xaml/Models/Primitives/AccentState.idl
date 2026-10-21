@@ -6,6 +6,7 @@ namespace TranslucentTB.Xaml.Models.Primitives
 		Opaque = 1,
 		Clear = 2,
 		Blur = 3,
-		Acrylic = 4
+		Acrylic = 4,
+		Dynamic = 5
 	};
 }

@@ -10,7 +10,7 @@ struct ActiveInactiveTaskbarAppearance : TaskbarAppearance {
 	std::optional<TaskbarAppearance> Inactive;
 
 	constexpr ActiveInactiveTaskbarAppearance() noexcept = default;
-	constexpr ActiveInactiveTaskbarAppearance(std::optional<TaskbarAppearance> inactive, ACCENT_STATE accent, Util::Color color, bool showPeek, bool showLine, float blurRadius) noexcept :
+	constexpr ActiveInactiveTaskbarAppearance(std::optional<TaskbarAppearance> inactive, AppearanceAccent accent, Util::Color color, bool showPeek, bool showLine, float blurRadius) noexcept :
 		TaskbarAppearance(accent, color, showPeek, showLine, blurRadius),
 		Inactive(std::move(inactive))
 	{ }

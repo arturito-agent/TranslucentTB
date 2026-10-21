@@ -1,0 +1,66 @@
+name: Dynamic Windows build
+on:
+  push:
+    branches: [feature/dynamic]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, dynamic]
+    env:
+      VCPKG_BINARY_SOURCES: clear
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          ref: ${{ matrix.variant == 'baseline' && '7d644774045429a98c07678df553b771e3b5d129' || github.sha }}
+      - uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
+      - uses: NuGet/setup-nuget@d105a947828025cd7a980103c35ba2bfae586d0f
+        with:
+          nuget-version: '7.0.1'
+      - name: Record toolchain and restore dependencies
+        shell: pwsh
+        run: |
+          git rev-parse HEAD
+          git -C C:\vcpkg rev-parse HEAD
+          msbuild -version
+          C:\vcpkg\vcpkg.exe integrate install
+          nuget restore TranslucentTB.slnx -NonInteractive -Source https://api.nuget.org/v3/index.json
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build Release x64
+        shell: pwsh
+        run: |
+          msbuild TranslucentTB.slnx /m:2 /p:Configuration=Release /p:Platform=x64 /p:BuildType=Dev /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /v:minimal
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Run upstream and configuration tests
+        shell: pwsh
+        run: |
+          & .\x64\Release\Tests.exe --gtest_output=xml:test-results.xml
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Test portable Dynamic algorithm
+        if: matrix.variant == 'dynamic'
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          & "$vs\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          cl /nologo /std:c++20 /EHsc /O2 /W4 /WX /I Common Tests\dynamic\standalone.cpp /Fe:dynamic-tests.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          .\dynamic-tests.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-x64-${{ matrix.variant }}
+          path: |
+            AppPackage/bin/x64/Release/**
+            x64/Release/Tests.exe
+            test-results.xml
+            dynamic-tests.exe
+          retention-days: 14

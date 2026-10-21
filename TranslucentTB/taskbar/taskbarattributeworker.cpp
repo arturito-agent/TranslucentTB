@@ -3,6 +3,7 @@
 #include <member_thunk/member_thunk.hpp>
 #include <set>
 #include <tlhelp32.h>
+#include <wtsapi32.h>
 
 #include "constants.hpp"
 #include "../localization.hpp"
@@ -291,6 +292,11 @@ LRESULT TaskbarAttributeWorker::OnSystemSettingsChange(UINT uiAction)
 
 LRESULT TaskbarAttributeWorker::OnPowerBroadcast(const POWERBROADCAST_SETTING *settings)
 {
+	if (settings && settings->PowerSetting == GUID_CONSOLE_DISPLAY_STATE && settings->DataLength == sizeof(DWORD))
+	{
+		m_DynamicDisplayOff = *reinterpret_cast<const DWORD *>(&settings->Data) == 0;
+		UpdateDynamicTimer();
+	}
 	if (settings && settings->PowerSetting == GUID_POWER_SAVING_STATUS && settings->DataLength == sizeof(DWORD))
 	{
 		m_PowerSaver = *reinterpret_cast<const DWORD *>(&settings->Data);
@@ -307,7 +313,7 @@ LRESULT TaskbarAttributeWorker::OnRequestAttributeRefresh(LPARAM lParam)
 		const Window window = reinterpret_cast<HWND>(lParam);
 		if (const auto iter = m_Taskbars.find(window.monitor()); iter != m_Taskbars.end() && iter->second.Taskbar.TaskbarWindow == window)
 		{
-			if (const auto config = GetConfig(iter); config.Accent != ACCENT_NORMAL)
+			if (const auto config = GetConfig(iter); config.Accent != AppearanceAccent::Normal)
 			{
 				SetAttribute(iter, config);
 				return 1;
@@ -320,6 +326,31 @@ LRESULT TaskbarAttributeWorker::OnRequestAttributeRefresh(LPARAM lParam)
 
 LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	if (uMsg == WM_TIMER && wParam == DYNAMIC_TIMER)
+	{
+		SampleDynamic();
+		return 0;
+	}
+	if (uMsg == WM_WTSSESSION_CHANGE)
+	{
+		if (wParam == WTS_SESSION_LOCK) m_DynamicLocked = true;
+		else if (wParam == WTS_SESSION_UNLOCK) m_DynamicLocked = false;
+		UpdateDynamicTimer();
+		return 0;
+	}
+	if (uMsg == WM_POWERBROADCAST && wParam == PBT_APMSUSPEND)
+	{
+		m_DynamicDisplayOff = true;
+		UpdateDynamicTimer();
+		return TRUE;
+	}
+	if (uMsg == WM_POWERBROADCAST && (wParam == PBT_APMRESUMEAUTOMATIC || wParam == PBT_APMRESUMESUSPEND))
+	{
+		m_DynamicDisplayOff = false;
+		m_DynamicCapture.Reset();
+		UpdateDynamicTimer();
+		return TRUE;
+	}
 	if (uMsg == WM_SETTINGCHANGE)
 	{
 		if (InSendMessage())
@@ -547,13 +578,23 @@ void TaskbarAttributeWorker::ShowTaskbarLine(const TaskbarInfo &taskbar, bool sh
 
 void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppearance config)
 {
+	// Resolve application-only Dynamic before either Windows composition path.
+	if (config.Accent == AppearanceAccent::Dynamic)
+	{
+		if (const auto color = taskbar->second.DynamicState.color)
+		{
+			config.Color = { color->r, color->g, color->b, 255 };
+		}
+		config.Accent = AppearanceAccent::Opaque;
+		config.Color.A = 255;
+	}
 	if (m_TaskbarService)
 	{
-		if (config.Accent == ACCENT_NORMAL)
+		if (config.Accent == AppearanceAccent::Normal)
 		{
 			HresultVerify(m_TaskbarService->ReturnTaskbarToDefaultAppearance(taskbar->second.Taskbar.TaskbarWindow), spdlog::level::info, L"Failed to restore taskbar to normal");
 		}
-		else if (config.Accent == ACCENT_ENABLE_BLURBEHIND)
+		else if (config.Accent == AppearanceAccent::Blur)
 		{
 			HresultVerify(m_TaskbarService->SetTaskbarBlur(taskbar->second.Taskbar.TaskbarWindow, config.Color.ToABGR(), config.BlurRadius / 3), spdlog::level::info, L"Failed to set taskbar brush");
 		}
@@ -562,11 +603,11 @@ void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppea
 			auto color = config.Color;
 			TaskbarBrush brush = SolidColor;
 
-			if (config.Accent == ACCENT_ENABLE_ACRYLICBLURBEHIND)
+			if (config.Accent == AppearanceAccent::Acrylic)
 			{
 				brush = Acrylic;
 			}
-			else if (config.Accent == ACCENT_ENABLE_GRADIENT)
+			else if (config.Accent == AppearanceAccent::Opaque)
 			{
 				color.A = 0xFF;
 			}
@@ -578,11 +619,11 @@ void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppea
 	{
 		const auto window = taskbar->second.Taskbar.TaskbarWindow;
 
-		if (config.Accent != ACCENT_NORMAL)
+		if (config.Accent != AppearanceAccent::Normal)
 		{
 			m_NormalTaskbars.erase(window);
 
-			const bool isAcrylic = config.Accent == ACCENT_ENABLE_ACRYLICBLURBEHIND;
+			const bool isAcrylic = config.Accent == AppearanceAccent::Acrylic;
 			if (isAcrylic && config.Color.A == 0)
 			{
 				// Acrylic mode doesn't likes a completely 0 opacity
@@ -590,7 +631,7 @@ void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppea
 			}
 
 			ACCENT_POLICY policy = {
-				config.Accent,
+				static_cast<ACCENT_STATE>(config.Accent),
 				static_cast<UINT>(isAcrylic ? 0 : 2),
 				config.Color.ToABGR(),
 				0
@@ -624,6 +665,7 @@ void TaskbarAttributeWorker::RefreshAttribute(taskbar_iterator taskbar)
 	const auto taskbarInfo = taskbar->second.Taskbar;
 
 	const auto &cfg = GetConfig(taskbar);
+	UpdateDynamicTimer();
 	SetAttribute(taskbar, cfg);
 
 	if (m_TaskbarService)
@@ -651,6 +693,68 @@ void TaskbarAttributeWorker::RefreshAllAttributes()
 	{
 		refresher.refresh(it);
 	}
+}
+
+void TaskbarAttributeWorker::UpdateDynamicTimer()
+{
+	bool needed = false;
+	if (!m_DynamicLocked && !m_DynamicDisplayOff && !m_disableAttributeRefreshReply)
+	{
+		for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
+		{
+			needed |= GetConfig(it).Accent == AppearanceAccent::Dynamic;
+		}
+	}
+	if (needed && !m_DynamicTimer)
+	{
+		m_DynamicTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_TIMER, 500, nullptr, 50) != 0;
+	}
+	else if (!needed && m_DynamicTimer)
+	{
+		KillTimer(m_WindowHandle, DYNAMIC_TIMER);
+		m_DynamicTimer = false;
+		m_DynamicCapture.Reset();
+		for (auto &[monitor, info] : m_Taskbars) info.DynamicState.pending.reset();
+	}
+}
+
+void TaskbarAttributeWorker::SampleDynamic()
+{
+	if (!m_DynamicTimer || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling) return;
+	const auto now = GetTickCount64();
+	if (now - m_DynamicLastSample < 200) return;
+	m_DynamicLastSample = now;
+	m_DynamicSampling = true;
+	auto guard = wil::scope_exit([this] { m_DynamicSampling = false; });
+	// Apply after capture; composition calls can enter nested message loops.
+	std::vector<std::pair<HMONITOR, HWND>> changed;
+	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
+	{
+		if (GetConfig(it).Accent != AppearanceAccent::Dynamic) continue;
+		MONITORINFO monitor{ sizeof(MONITORINFO) };
+		RECT bar{};
+		const auto hwnd = it->second.Taskbar.TaskbarWindow.handle();
+		std::optional<Dynamic::Segment> result;
+		std::size_t steps = 0;
+		if (GetMonitorInfo(it->first, &monitor) && GetWindowRect(hwnd, &bar))
+		{
+			const auto &m = monitor.rcMonitor;
+			if (const auto geometry = Dynamic::SampleGeometry({ m.left, m.top, m.right, m.bottom },
+				{ bar.left, bar.top, bar.right, bar.bottom }))
+			{
+				result = m_DynamicCapture.Capture(*geometry, it->second.DynamicState.color);
+				steps = geometry->edge == Dynamic::Edge::Bottom ? m.right - m.left : m.bottom - m.top;
+			}
+		}
+		if (it->second.DynamicState.Observe(result, steps, now)) changed.emplace_back(it->first, hwnd);
+	}
+	for (const auto &[monitor, hwnd] : changed)
+	{
+		const auto it = m_Taskbars.find(monitor);
+		if (it != m_Taskbars.end() && it->second.Taskbar.TaskbarWindow.handle() == hwnd &&
+			GetConfig(it).Accent == AppearanceAccent::Dynamic) SetAttribute(it, GetConfig(it));
+	}
+	UpdateDynamicTimer();
 }
 
 void TaskbarAttributeWorker::LogWindowInsertion(const std::pair<std::unordered_set<Window>::iterator, bool> &result, std::wstring_view state, HMONITOR mon)
@@ -1012,7 +1116,7 @@ void TaskbarAttributeWorker::ReturnToStock()
 		std::vector<TaskbarInfo> taskbarInfos;
 		for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 		{
-			SetAttribute(it, { ACCENT_NORMAL, { 0, 0, 0, 0 }, true, true, 0.0f });
+			SetAttribute(it, { AppearanceAccent::Normal, { 0, 0, 0, 0 }, true, true, 0.0f });
 
 			taskbarInfos.push_back(it->second.Taskbar);
 		}
@@ -1271,6 +1375,11 @@ TaskbarAttributeWorker::TaskbarAttributeWorker(ConfigManager &cfgManager, HINSTA
 	m_ThunkPage.mark_executable();
 
 	m_PowerSaverHook.reset(RegisterPowerSettingNotification(m_WindowHandle, &GUID_POWER_SAVING_STATUS, DEVICE_NOTIFY_WINDOW_HANDLE));
+	m_DynamicDisplayHook.reset(RegisterPowerSettingNotification(m_WindowHandle, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE));
+	if (!WTSRegisterSessionNotification(m_WindowHandle, NOTIFY_FOR_THIS_SESSION))
+	{
+		LastErrorHandle(spdlog::level::warn, L"Failed to register Dynamic session notifications");
+	}
 	if (!m_PowerSaverHook)
 	{
 		LastErrorHandle(spdlog::level::warn, L"Failed to create battery saver notification handle");
@@ -1427,6 +1536,7 @@ void TaskbarAttributeWorker::ResetState(bool manual)
 		m_ForegroundWindow = Window::NullWindow;
 
 		m_Taskbars.clear();
+		m_DynamicCapture.Reset();
 		m_NormalTaskbars.clear();
 
 		m_TaskbarService = nullptr;
@@ -1577,6 +1687,8 @@ void TaskbarAttributeWorker::ResetState(bool manual)
 TaskbarAttributeWorker::~TaskbarAttributeWorker() noexcept(false)
 {
 	m_disableAttributeRefreshReply = true;
+	UpdateDynamicTimer();
+	WTSUnRegisterSessionNotification(m_WindowHandle);
 	UnregisterTaskViewCallbacks();
 	UnregisterSearchCallbacks();
 	ReturnToStock();

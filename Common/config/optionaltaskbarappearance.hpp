@@ -8,7 +8,7 @@ struct OptionalTaskbarAppearance : TaskbarAppearance {
 	bool Enabled = false;
 
 	constexpr OptionalTaskbarAppearance() noexcept = default;
-	constexpr OptionalTaskbarAppearance(bool enabled, ACCENT_STATE accent, Util::Color color, bool showPeek, bool showLine, float blurRadius) noexcept :
+	constexpr OptionalTaskbarAppearance(bool enabled, AppearanceAccent accent, Util::Color color, bool showPeek, bool showLine, float blurRadius) noexcept :
 		TaskbarAppearance(accent, color, showPeek, showLine, blurRadius),
 		Enabled(enabled)
 	{ }

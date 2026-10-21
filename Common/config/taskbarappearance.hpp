@@ -17,19 +17,19 @@
 #include "rapidjsonhelper.hpp"
 #endif
 
-#include "../undoc/user32.hpp"
+#include "appearanceaccent.hpp"
 #include "../util/color.hpp"
 #include "../win32.hpp"
 
 struct TaskbarAppearance {
-	ACCENT_STATE Accent = ACCENT_NORMAL;
+	AppearanceAccent Accent = AppearanceAccent::Normal;
 	Util::Color Color = { 0, 0, 0, 0 };
 	bool ShowPeek = true;
 	bool ShowLine = true;
 	float BlurRadius = 9.0f;
 
 	constexpr TaskbarAppearance() noexcept = default;
-	constexpr TaskbarAppearance(ACCENT_STATE accent, Util::Color color, bool showPeek, bool showLine, float blurRadius) noexcept :
+	constexpr TaskbarAppearance(AppearanceAccent accent, Util::Color color, bool showPeek, bool showLine, float blurRadius) noexcept :
 		Accent(accent),
 		Color(color),
 		ShowPeek(showPeek),
@@ -108,12 +108,13 @@ protected:
 	}
 
 private:
-	static constexpr std::array<std::wstring_view, 5> ACCENT_MAP = {
+	static constexpr std::array<std::wstring_view, 6> ACCENT_MAP = {
 		L"normal",
 		L"opaque",
 		L"clear",
 		L"blur",
-		L"acrylic"
+		L"acrylic",
+		L"dynamic"
 	};
 
 	static constexpr std::wstring_view ACCENT_KEY = L"accent";
@@ -126,7 +127,7 @@ private:
 #ifdef HAS_WINRT_CONFIG
 public:
 	TaskbarAppearance(const txmp::TaskbarAppearance &winrtObj) noexcept :
-		Accent(static_cast<ACCENT_STATE>(winrtObj.Accent())),
+		Accent(static_cast<AppearanceAccent>(winrtObj.Accent())),
 		Color(winrtObj.Color()),
 		ShowPeek(winrtObj.ShowPeek()),
 		ShowLine(winrtObj.ShowLine()),

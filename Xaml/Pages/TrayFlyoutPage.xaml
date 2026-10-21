@@ -56,6 +56,11 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Dynamic" GroupName="DesktopCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Dynamic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_VisibleWindow" Style="{StaticResource MergeIconsMenuFlyoutSubItem}">
                 <MenuFlyoutSubItem.Tag>
@@ -98,6 +103,11 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Dynamic" GroupName="VisibleCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Dynamic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_MaximizedWindow" Style="{StaticResource MergeIconsMenuFlyoutSubItem}">
                 <MenuFlyoutSubItem.Tag>
@@ -138,6 +148,11 @@
                 <muxc:RadioMenuFlyoutItem x:Uid="TrayFlyoutPage_Acrylic" GroupName="MaximizedCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
                     <muxc:RadioMenuFlyoutItem.Tag>
                         <primitives:AccentState>Acrylic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Dynamic" GroupName="MaximizedCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Dynamic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
@@ -185,6 +200,11 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Dynamic" GroupName="StartCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Dynamic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_SearchOpened" Style="{StaticResource MergeIconsMenuFlyoutSubItem}">
                 <MenuFlyoutSubItem.Tag>
@@ -225,6 +245,11 @@
                 <muxc:RadioMenuFlyoutItem x:Uid="TrayFlyoutPage_Acrylic" GroupName="SearchCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
                     <muxc:RadioMenuFlyoutItem.Tag>
                         <primitives:AccentState>Acrylic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Dynamic" GroupName="SearchCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Dynamic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
@@ -269,6 +294,11 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Dynamic" GroupName="TaskViewCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Dynamic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_BatterySaver" Style="{StaticResource MergeIconsMenuFlyoutSubItem}" Visibility="{x:Bind SystemHasBattery}">
                 <MenuFlyoutSubItem.Tag>
@@ -309,6 +339,11 @@
                 <muxc:RadioMenuFlyoutItem x:Uid="TrayFlyoutPage_Acrylic" GroupName="BatterySaverCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
                     <muxc:RadioMenuFlyoutItem.Tag>
                         <primitives:AccentState>Acrylic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Dynamic" GroupName="BatterySaverCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Dynamic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>

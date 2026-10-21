@@ -72,7 +72,7 @@
       <PreprocessorDefinitions>_TRANSLUCENTTB_EXE;WINRT_NO_MODULE_LOCK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>advapi32.lib;comctl32.lib;coremessaging.lib;delayimp.lib;dwmapi.lib;gdi32.lib;mincore.lib;ole32.lib;pathcch.lib;runtimeobject.lib;shcore.lib;shell32.lib;shlwapi.lib;user32.lib;onecore.lib</AdditionalDependencies>
+      <AdditionalDependencies>wtsapi32.lib;advapi32.lib;comctl32.lib;coremessaging.lib;delayimp.lib;dwmapi.lib;gdi32.lib;mincore.lib;ole32.lib;pathcch.lib;runtimeobject.lib;shcore.lib;shell32.lib;shlwapi.lib;user32.lib;onecore.lib</AdditionalDependencies>
       <DelayLoadDLLs>api-ms-win-appmodel-runtime-l1-1-5.dll</DelayLoadDLLs>
       <SubSystem>Windows</SubSystem>
     </Link>

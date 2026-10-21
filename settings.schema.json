@@ -10,7 +10,8 @@
             "opaque",
             "clear",
             "blur",
-            "acrylic"
+            "acrylic",
+            "dynamic"
           ],
           "type": "string"
         },

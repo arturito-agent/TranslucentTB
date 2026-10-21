@@ -31,6 +31,7 @@
 #include "../ProgramLog/error/win32.hpp"
 #include "../loadabledll.hpp"
 #include "../managers/configmanager.hpp"
+#include "dynamiccapture.hpp"
 
 enum class TaskbarType {
 	Unknown,
@@ -55,6 +56,7 @@ private:
 		TaskbarInfo Taskbar;
 		std::unordered_set<Window> MaximisedWindows;
 		std::unordered_set<Window> NormalWindows;
+		Dynamic::Stability DynamicState;
 	};
 
 	struct MonitorEnumInfo {
@@ -93,6 +95,16 @@ private:
 	std::unordered_map<HMONITOR, MonitorInfo> m_Taskbars;
 	std::unordered_set<Window> m_NormalTaskbars;
 	ConfigManager &m_ConfigManager;
+	Dynamic::GdiCapture m_DynamicCapture;
+	bool m_DynamicTimer = false;
+	bool m_DynamicLocked = false;
+	bool m_DynamicDisplayOff = false;
+	bool m_DynamicSampling = false;
+	ULONGLONG m_DynamicLastSample = 0;
+	wil::unique_hpowernotify m_DynamicDisplayHook;
+	static constexpr UINT_PTR DYNAMIC_TIMER = 0x44594E;
+	void UpdateDynamicTimer();
+	void SampleDynamic();
 
 	// Hooks
 	member_thunk::page m_ThunkPage;

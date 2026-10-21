@@ -277,9 +277,9 @@ void ConfigManager::UpgradeBlur()
 
 	for (TaskbarAppearance* appearance : appearances)
 	{
-		if (appearance->Accent == ACCENT_ENABLE_BLURBEHIND)
+		if (appearance->Accent == AppearanceAccent::Blur)
 		{
-			appearance->Accent = ACCENT_ENABLE_ACRYLICBLURBEHIND;
+			appearance->Accent = AppearanceAccent::Acrylic;
 		}
 	}
 }

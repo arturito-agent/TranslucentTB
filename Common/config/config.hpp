@@ -37,13 +37,13 @@ public:
 #endif
 
 	// Appearances
-	TaskbarAppearance DesktopAppearance = { ACCENT_ENABLE_TRANSPARENTGRADIENT, { 0, 0, 0, 0 }, false, false, 9.0f };
-	RuledTaskbarAppearance VisibleWindowAppearance = { {}, {}, {}, false, ACCENT_ENABLE_TRANSPARENTGRADIENT, { 0, 0, 0, 0 }, true, false, 9.0f };
-	RuledTaskbarAppearance MaximisedWindowAppearance = { {}, {}, {}, false, ACCENT_ENABLE_ACRYLICBLURBEHIND, { 0, 0, 0, 0 }, true, true, 9.0f };
-	OptionalTaskbarAppearance StartOpenedAppearance = { !IsWindows11(), ACCENT_NORMAL, { 0, 0, 0, 0 }, true, true, 9.0f };
-	OptionalTaskbarAppearance SearchOpenedAppearance = { !IsWindows11(), ACCENT_NORMAL, { 0, 0, 0, 0 }, true, true, 9.0f };
-	OptionalTaskbarAppearance TaskViewOpenedAppearance = { true, ACCENT_NORMAL, { 0, 0, 0, 0 }, false, true, 9.0f };
-	OptionalTaskbarAppearance BatterySaverAppearance = { false, ACCENT_ENABLE_GRADIENT, { 0, 0, 0, 0 }, true, false, 9.0f };
+	TaskbarAppearance DesktopAppearance = { AppearanceAccent::Clear, { 0, 0, 0, 0 }, false, false, 9.0f };
+	RuledTaskbarAppearance VisibleWindowAppearance = { {}, {}, {}, false, AppearanceAccent::Clear, { 0, 0, 0, 0 }, true, false, 9.0f };
+	RuledTaskbarAppearance MaximisedWindowAppearance = { {}, {}, {}, false, AppearanceAccent::Acrylic, { 0, 0, 0, 0 }, true, true, 9.0f };
+	OptionalTaskbarAppearance StartOpenedAppearance = { !IsWindows11(), AppearanceAccent::Normal, { 0, 0, 0, 0 }, true, true, 9.0f };
+	OptionalTaskbarAppearance SearchOpenedAppearance = { !IsWindows11(), AppearanceAccent::Normal, { 0, 0, 0, 0 }, true, true, 9.0f };
+	OptionalTaskbarAppearance TaskViewOpenedAppearance = { true, AppearanceAccent::Normal, { 0, 0, 0, 0 }, false, true, 9.0f };
+	OptionalTaskbarAppearance BatterySaverAppearance = { false, AppearanceAccent::Opaque, { 0, 0, 0, 0 }, true, false, 9.0f };
 
 	// Advanced
 	WindowFilter IgnoredWindows;

@@ -1,3 +1,10 @@
+# TranslucentTB Dynamic experiment
+
+Experimental fork adding Dynamic to the native appearance selector.
+See [Dynamic documentation](docs/dynamic.md) for behavior, tests and current validation limits.
+
+---
+
 ﻿# TranslucentTB
 
 [![Liberapay patrons](https://img.shields.io/liberapay/patrons/TranslucentTB.svg)](https://liberapay.com/TranslucentTB/)
