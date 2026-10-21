@@ -106,8 +106,10 @@ while ($true) {
     $rows = New-Object 'System.Collections.Generic.List[object]'
     $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
     $supportsStats = $window -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($window,$message,255) -eq 0x44594E01
-    $captureStats = $supportsStats -and ([DynamicMetrics]::Read($window,$message,254) -band 1) -ne 0
-    $schedulerStats = $IncludeScheduler -and $supportsStats -and ([DynamicMetrics]::Read($window,$message,254) -band 2) -ne 0
+    $capabilities = if($supportsStats){[DynamicMetrics]::Read($window,$message,254)}else{0}
+    $captureStats = $supportsStats -and ($capabilities -band 1) -ne 0
+    $schedulerAvailable = $supportsStats -and ($capabilities -band 2) -ne 0
+    $schedulerStats = $IncludeScheduler -and $schedulerAvailable
     $fixtureWindow = [DynamicMetrics]::Fixture($WorkloadProcessId)
     $fixtureStats = $fixtureWindow -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,255) -eq 0x46585401
     $processes = @(if ($SystemOnly) { Get-Process -Name dwm,ep_dwm_svc -ErrorAction SilentlyContinue }
@@ -176,6 +178,14 @@ while ($true) {
         $targetRow = @($rows | Where-Object pid -eq $TargetProcessId)[0]
         if ($targetRow.dynamic_stats_available -ne $true -or $targetRow.capture_stats_available -ne $true -or
             $targetRow.dynamic_timer -ne 1 -or $targetRow.dynamic_paused -ne 0) {
+            # Query detailed context only on failure, without adding normal-suite
+            # IPC overhead. Preserve the original CSV observation as written.
+            $context=[ordered]@{label=$Label;commit=$Commit;pid=$TargetProcessId;detected_qpc=$qpc;qpc_frequency=[Diagnostics.Stopwatch]::Frequency;scheduler_available=$schedulerAvailable;timer=$targetRow.dynamic_timer;paused=$targetRow.dynamic_paused}
+            if($schedulerAvailable) {
+                $names=@('flags','taskbars','stop_entry_flags','stop_flags','stop_tick','stop_taskbars','stop_desktop','timer_error','desktop','stops','timer_failures')
+                for($index=0;$index -lt $names.Count;$index++){$context[$names[$index]]=[DynamicMetrics]::Read($window,$message,($index+11))}
+            }
+            $context|ConvertTo-Json|Set-Content -Encoding UTF8 -LiteralPath ($Output+'.sampler-failure.json')
             throw 'Candidate sampler paused or stopped; retained the failing observation'
         }
     }

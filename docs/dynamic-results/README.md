@@ -59,8 +59,22 @@ animate; the changing/interaction scenes produce repeated paints. Native file
 transport changed line endings to CRLF; canonical LF text was matched to source.
 This is workload evidence only, not a backend/resource comparison.
 
-`policy-recompute-gdi-51b4-negative-r1.json` is a controlled negative result for
-transient teardown. `passed=true` means the requested bad behavior was observed:
-64timer stops with suppression bit4, followed by an active sampler. The probe's
+`policy-recompute-{gdi,dxgi}-51b4-negative-r1.json` records controlled negative
+results for transient teardown. GDI records 64 stops and DXGI 58. `passed=true`
+means the requested bad behavior was observed: unwanted timer stops with
+suppression bit4, followed by an active sampler. The probe's
 synthetic unlock notifications do not change the Windows session lock state.
 It establishes neither the cause of the spontaneous stop nor a resource budget.
+
+`policy-recompute-{gdi,dxgi}-753a-positive-r{1,2,3}.json` records three positive
+trials per backend after separating shutdown from temporary suppression. All
+have zero stops, active timers, advancing attempts and zero IPC errors.
+`refresh-race-{gdi,dxgi}-753a-r1.json` also verifies the original timer/refresh
+overlap on that revision. `functional-right-{gdi,dxgi}-753a.csv` contains its six
+color cases per backend on the real right taskbar. These controlled regressions
+do not establish long-series health or resource budgets.
+
+`inactive-gdi-753a.json` deliberately asks the collector to require Dynamic
+while Desktop Clear is selected. Its expected rejection and failure-only
+scheduler snapshot pass; capture attempts and frames remain zero. This is a
+diagnostic-tool check and inactive-mode test, not an application failure.

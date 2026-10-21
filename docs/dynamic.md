@@ -247,6 +247,9 @@ retroactively attributed to it.
 Candidate phases also use `-RequireDynamic`: the collector saves the first
 stopped/paused observation and fails immediately, instead of continuing a known
 invalid five-minute interval. The baseline does not require Dynamic.
+On failure it also writes `<csv>.sampler-failure.json`, querying scheduler context
+once when supported. Valid full resource intervals keep their ordinary query
+count; detailed periodic queries still require `-IncludeScheduler`.
 `summarize.py` reports per-process absolute metrics and rates, preserves missing
 values and refuses short/SMOKE data as benchmarks. Its optional DWM stream
 interpolates cumulative CPU at common QPC endpoints only when the observer

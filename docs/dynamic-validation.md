@@ -7,14 +7,15 @@ Application revisions: upstream baseline
 `3ea6890f1a7bf11b1b6bd8b44b6c819778458cb1`, lateral GDI/DXGI validation
 `a6ad586fdd243f997058c79509b5328158ade6ed`, focus scheduling/counters
 `a1b05b5840d48f29487fb1622091f576fb0505bb`, per-monitor ownership ad232a0,
-and current tested application `b46440a1f2feb5e5ce5538b7322bf1adbf60f7d2`.
+refresh reconciliation `b46440a1f2feb5e5ce5538b7322bf1adbf60f7d2`, and current
+tested application `753ad89ab3492098316a3015bbfc0a4539f415ba`.
 
 The current source also gives each monitor a lazy capture instance, releasing
 it when its appearance stops needing Dynamic. Previously, one shared DXGI
 instance would recreate its device/duplication each time sampling switched
 between outputs. Aggregate lifetime capture counters now survive destruction
 of those instances. Revision ad232a0 passes both Windows builds, 83 native tests
-and 2,021 portable checks; current b46440a includes that ownership change and
+and 2,021 portable checks; current 753ad89 includes that ownership change and
 its live regression/color results are recorded below.
 Measurements for a1b05b5 must not be presented as measuring the revised worker.
 Multiple-display hardware is unavailable in this VM.
@@ -61,9 +62,9 @@ A separate90second debug-logging follow-up retained91observations, all timer=1,
 paused=0, with advancing attempts and no capture failures. The live configuration
 remained Dynamic; its private debug log records only the initial state reset.
 This failed to reproduce the intermittent stop and establishes no repair.
-Latest source adds opt-in scalar scheduler snapshots to distinguish missing
+Revision51b47c3 added opt-in scalar scheduler snapshots to distinguish missing
 taskbars, temporary suppression, configuration changes and timer creation
-failures in the next diagnostic. It is instrumentation, not a new fix.
+failures in the next diagnostic. That revision was instrumentation, not a fix.
 
 Both51b47c3 builds pass83native tests and2021portable checks. The first90second
 GDI VM observation with scheduler diagnostics remains active throughout and
@@ -73,9 +74,30 @@ bounded controlled composition-refresh/policy-recompute overlap:79refresh calls,
 attribute-suppression context bit4. It finishes active. The
 [negative control](dynamic-results/policy-recompute-gdi-51b4-negative-r1.json)
 demonstrates transient teardown, not the spontaneous permanent stop or an actual
-session unlock. Latest source now separates shutdown from temporary reply
-suppression so that recomputation keeps the active sampler's resources. The
-new positive regression/builds and subsequent long-series behavior remain pending.
+session unlock. Revision 753ad89 separates shutdown from temporary reply
+suppression so that recomputation keeps the active sampler's resources. Both
+builds pass 83 native tests and 2,021 portable checks. The same old-policy
+negative control also reproduces58transient stops with DXGI in6seconds, with
+84refresh calls,254synthetic recomputations, suppression bit4 and zero IPC errors;
+see its [receipt](dynamic-results/policy-recompute-dxgi-51b4-negative-r1.json).
+
+Three six-second positive policy-overlap trials per backend on 753ad89 retain
+active, unpaused sampling, advancing attempts, zero IPC errors and zero timer
+stops. GDI refresh/recompute counts are 77/277, 76/275 and 75/273; DXGI counts
+are 77/282, 76/276 and 78/286. The original forced-refresh/sent-timer regression
+also passes once per backend, with zero stops. Both backends pass all six real
+right-taskbar color cases. Each backend's separate 120-second observation has
+121 target observations, all active, unpaused and with zero stops. These
+controlled tests establish the transient-teardown fix; they do not establish
+that the spontaneous permanent stop is resolved or that resource budgets pass.
+See the [reviewed receipts](dynamic-results/README.md).
+
+A separate current GDI inactive-mode check observes zero attempts and completed
+frames with Desktop Clear. Deliberately requiring an active sampler rejects
+that scene and verifies the collector's failure-only scheduler snapshot:
+timer=0, paused=0, Desktop=Clear, context bit64. The app exits gracefully and its
+configuration is restored. This validates diagnostics and inactive capture,
+not display-off or actual session-lock behavior.
 
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests

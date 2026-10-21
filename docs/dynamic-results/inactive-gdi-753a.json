@@ -1,0 +1,31 @@
+{
+  "commit": "753ad89ab3492098316a3015bbfc0a4539f415ba",
+  "expected_rejection": true,
+  "failure_context": {
+    "label": "SMOKE-Inactive",
+    "commit": "753ad89ab3492098316a3015bbfc0a4539f415ba",
+    "pid": 5348,
+    "detected_qpc": 235974031777,
+    "qpc_frequency": 10000000,
+    "scheduler_available": true,
+    "timer": 0,
+    "paused": 0,
+    "flags": 64,
+    "taskbars": 1,
+    "stop_entry_flags": 0,
+    "stop_flags": 0,
+    "stop_tick": 0,
+    "stop_taskbars": 0,
+    "stop_desktop": 0,
+    "timer_error": 0,
+    "desktop": 2,
+    "stops": 0,
+    "timer_failures": 0
+  },
+  "inactive_samples_start": 0,
+  "inactive_samples_end": 0,
+  "inactive_frames_start": 0,
+  "inactive_frames_end": 0,
+  "passed": true,
+  "diagnostic_only": true
+}

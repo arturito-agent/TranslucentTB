@@ -1,0 +1,27 @@
+﻿{
+    "commit":  "51b47c328b537c6bb4df2523046bad05537d2e6c",
+    "pid":  5308,
+    "requested_seconds":  6,
+    "expect_stopped":  false,
+    "policy_recompute":  true,
+    "expect_transient_stops":  true,
+    "synthetic_notification_only":  true,
+    "passed":  true,
+    "result":  {
+                   "BeforeSamples":  7,
+                   "AfterSamples":  11,
+                   "BeforeTimer":  1,
+                   "AfterTimer":  1,
+                   "Paused":  0,
+                   "BeforeStops":  0,
+                   "AfterStops":  58,
+                   "StopEntryFlags":  4,
+                   "StopFlags":  4,
+                   "CurrentFlags":  0,
+                   "SchedulerDiagnostics":  true,
+                   "RefreshCalls":  84,
+                   "TimerCalls":  0,
+                   "RecomputeCalls":  254,
+                   "Errors":  0
+               }
+}

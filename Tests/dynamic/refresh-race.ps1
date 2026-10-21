@@ -13,6 +13,7 @@ if($ExpectTransientStops -and -not $PolicyRecompute){throw 'Transient-stop contr
 if($ExpectStopped -and $PolicyRecompute){throw 'Choose one negative-control mode'}
 # Diagnostic regression only: it deliberately overlaps sent timer/refresh messages.
 # Run on an awake classic taskbar with Dynamic active, outside resource trials.
+if(-not ('DynamicRefreshRace' -as [type])) {
 Add-Type @'
 using System;
 using System.Threading;
@@ -85,6 +86,7 @@ public static class DynamicRefreshRace {
     }
 }
 '@
+}
 $ownerId = [DynamicRefreshRace]::Owner()
 if ($ownerId -eq 0) { throw 'No candidate worker' }
 $target = Get-Process -Id $ownerId
