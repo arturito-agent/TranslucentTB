@@ -4,6 +4,7 @@
 #include <shellapi.h>
 #include <cmath>
 #include <chrono>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.UI.ViewManagement.h>
 #include <wil/cppwinrt_helpers.h>
 #include <winrt/Windows.Management.Deployment.h>
