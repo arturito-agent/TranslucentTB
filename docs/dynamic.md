@@ -40,6 +40,8 @@ minimum between attempts. Window events never capture pixels synchronously.
 Sampling only applies changed colors. Explorer
 invalidations may reapply cached colors. Sampling stops when no effective
 appearance is Dynamic, the session locks, or the display turns off.
+Sampling skips temporary attribute suppression during forced composition
+refreshes; timer state is reconciled when the previous suppression flag returns.
 Capture resources are created lazily per monitor and released when that
 monitor no longer needs Dynamic. This also keeps each DXGI output's duplication
 and cached strip separate. Lifetime diagnostic totals remain in the worker

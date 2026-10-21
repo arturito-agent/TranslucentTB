@@ -31,3 +31,7 @@ Do not interpret them as UTC. Short functional stages do not establish CPU/RAM, 
 The focus-latency CSVs and focus-latency-a1b0.json use 30 jittered trials per
 backend, a 50ms observer and nearest-rank p95. They include the DXGI maximum
 outlier and identify the exact application revision and geometry.
+
+`refresh-race-a1b0.json` is a negative control: bounded overlapping forced-refresh
+and sent timer messages leave the classic-taskbar sampler stopped while not
+paused. It records a reproduced defect, not a passing result or resource trial.

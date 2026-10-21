@@ -12,9 +12,26 @@ The current source also gives each monitor a lazy capture instance, releasing
 it when its appearance stops needing Dynamic. Previously, one shared DXGI
 instance would recreate its device/duplication each time sampling switched
 between outputs. Aggregate lifetime capture counters now survive destruction
-of those instances. This change awaits Windows build/runtime validation; the
-active resource series still uses a1b05b5 and must not be presented as measuring
-the revised worker. Multiple-display hardware is unavailable in this VM.
+of those instances. Revision ad232a0 passes both Windows builds, 83 native tests
+and 2,021 portable checks; VM runtime validation of that worker remains pending.
+Measurements for a1b05b5 must not be presented as measuring the revised worker.
+Multiple-display hardware is unavailable in this VM.
+
+The a1b05b5 right/static resource series aborted during repetition two's GDI
+phase. All 62 measured target observations report timer=0, paused=0, unchanged
+45 attempts/frames and no capture failures. The driver closed the app/fixture
+and restored its test configuration; the separate DWM observer was then stopped.
+The eight completed earlier phases remain partial evidence, not a completed
+three-repeat benchmark. No final backend choice or budget pass follows from them.
+
+A bounded forced-composition-refresh/timer overlap reproduces a stop on a1b05b5:
+timer 1 to 0 with paused=0, 77 refresh calls, 293 sent timer messages and no IPC
+errors. The original spontaneous trigger was not recorded. Current source skips
+sampling during temporary attribute suppression and reconciles timers after
+restoring the previous suppression flag, including nested refreshes. The
+[negative control](dynamic-results/refresh-race-a1b0.json) and
+`Tests/dynamic/refresh-race.ps1` reproduce this mechanism. The fix still needs
+its own build and live regression validation before long measurements resume.
 
 ## Environment
 
@@ -123,8 +140,8 @@ release's own [GUI position message](https://github.com/valinet/ExplorerPatcher/
 refits the owned fixture, and checks/records actual geometry after each restart
 and in every collected sample. The corrected five-phase smoke passed: all target
 observations report the actual right rectangle (1218,0)..(1280,800).
-The first full right/static series is now running with three repetitions; no
-resource budget or backend winner has been established yet.
+The first full right/static series aborted as described above; no resource
+budget or backend winner has been established yet.
 
 ## Still required
 

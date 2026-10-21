@@ -1,0 +1,20 @@
+{
+  "commit": "a1b05b5840d48f29487fb1622091f576fb0505bb",
+  "position": "Right",
+  "taskbar": "ExplorerPatcher classic",
+  "requested_seconds": 6,
+  "cooldown_ms": 1000,
+  "diagnostic_only": true,
+  "fixed_behavior": false,
+  "result": {
+    "BeforeSamples": 245,
+    "AfterSamples": 246,
+    "BeforeTimer": 1,
+    "AfterTimer": 0,
+    "Paused": 0,
+    "RefreshCalls": 77,
+    "TimerCalls": 293,
+    "Errors": 0
+  },
+  "note": "A bounded overlap of sent forced-composition-refresh and timer messages reproduces a sampler stop. This is a negative control, not a resource benchmark; the original spontaneous trigger was not recorded."
+}

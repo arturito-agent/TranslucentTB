@@ -270,10 +270,11 @@ void TaskbarAttributeWorker::OnForceRefreshTaskbar(Window taskbar)
 {
 	if (!m_TaskbarService)
 	{
-		m_disableAttributeRefreshReply = true;
-		auto guard = wil::scope_exit([this]
+		const bool wasDisabled = std::exchange(m_disableAttributeRefreshReply, true);
+		auto guard = wil::scope_exit([this, wasDisabled]
 		{
-			m_disableAttributeRefreshReply = false;
+			m_disableAttributeRefreshReply = wasDisabled;
+			UpdateDynamicTimer();
 		});
 
 		taskbar.send_message(WM_DWMCOMPOSITIONCHANGED);
@@ -783,7 +784,7 @@ void TaskbarAttributeWorker::RequestDynamicFocusSample()
 
 void TaskbarAttributeWorker::SampleDynamic()
 {
-	if (!m_DynamicTimer || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling) return;
+	if (!m_DynamicTimer || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling || m_disableAttributeRefreshReply) return;
 	const auto now = GetTickCount64();
 	if (now - m_DynamicLastSample < 200) return;
 	m_DynamicLastSample = now;
