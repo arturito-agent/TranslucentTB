@@ -55,6 +55,23 @@ translated before entering Windows composition APIs.
 
 ## Build and tests
 
+For activation, portable dependencies and known limitations, read
+[installation and use](dynamic-install.md). To package an extracted, verified
+Windows CI runtime after the installation instructions and evidence are
+committed, run:
+
+```sh
+python3 Tests/dynamic/package.py --runtime /path/to/extracted-runtime \
+  --output TranslucentTB-Dynamic-x64.zip
+```
+
+The runtime directory must contain its verified `BUILD.json`. The packager
+checks the executable hash, includes the runtime allowlist, committed public
+documentation and license, and writes file checksums. It excludes personal
+settings, logs, symbols and build intermediates. Packaging does not establish
+functional correctness or resource budgets; validate the extracted package
+before publishing it.
+
 Use the upstream [build instructions](../CONTRIBUTING.md), Release x64. Portable
 execution also requires a desktop Visual C++ v14 x64 runtime at least as recent
 as the compiler, in addition to the WinUI/UWP framework dependencies. Obtain the
