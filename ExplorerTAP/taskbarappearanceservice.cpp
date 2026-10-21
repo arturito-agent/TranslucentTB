@@ -2,6 +2,7 @@
 #include <CommCtrl.h>
 #include <RpcProxy.h>
 #include <shellapi.h>
+#include <cmath>
 #include <wil/cppwinrt_helpers.h>
 #include <winrt/Windows.Management.Deployment.h>
 
@@ -16,6 +17,43 @@ extern "C"
 }
 
 DWORD TaskbarAppearanceService::s_ProxyStubRegistrationCookie = 0;
+
+void TaskbarAppearanceService::RestoreDynamicTheme(HWND taskbar)
+{
+	if (const auto it = m_DynamicThemes.find(taskbar); it != m_DynamicThemes.end())
+	{
+		const auto info = it->second;
+		m_DynamicThemes.erase(it);
+		if (info.wasUnset) info.root.ClearValue(wux::FrameworkElement::RequestedThemeProperty());
+		else info.root.RequestedTheme(info.original);
+	}
+}
+
+void TaskbarAppearanceService::SetDynamicTheme(HWND taskbar, const wux::Shapes::Shape &background, const Util::Color &color)
+{
+	const auto xamlRoot = background.XamlRoot();
+	if (!xamlRoot) return;
+	const auto root = xamlRoot.Content().try_as<wux::FrameworkElement>();
+	if (!root) return;
+	if (const auto old = m_DynamicThemes.find(taskbar); old != m_DynamicThemes.end() && old->second.root != root)
+	{
+		RestoreDynamicTheme(taskbar);
+	}
+	if (!m_DynamicThemes.contains(taskbar))
+	{
+		m_DynamicThemes.emplace(taskbar, ThemeInfo{ root, root.RequestedTheme(),
+			root.ReadLocalValue(wux::FrameworkElement::RequestedThemeProperty()) == wux::DependencyProperty::UnsetValue() });
+	}
+	const auto linear = [](std::uint8_t channel)
+	{
+		const double s = channel / 255.0;
+		return s <= 0.04045 ? s / 12.92 : std::pow((s + 0.055) / 1.055, 2.4);
+	};
+	const double luminance = 0.2126 * linear(color.R) + 0.7152 * linear(color.G) + 0.0722 * linear(color.B);
+	// Choose the theme with greater black/white contrast; keep the chosen RGB intact.
+	const auto theme = luminance > 0.179 ? wux::ElementTheme::Light : wux::ElementTheme::Dark;
+	if (root.RequestedTheme() != theme) root.RequestedTheme(theme);
+}
 
 TaskbarAppearanceService::TaskbarAppearanceService() :
 	m_RegisterCookie(0),
@@ -37,6 +75,7 @@ HRESULT TaskbarAppearanceService::GetVersion(DWORD* apiVersion) noexcept
 
 HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrush brush, UINT color) try
 {
+	if (brush != DynamicColor) RestoreDynamicTheme(taskbar);
 	if (const auto info = GetTaskbarInfo(taskbar))
 	{
 		if (info->background.control && info->background.originalFill)
@@ -59,7 +98,7 @@ HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrus
 
 				newBrush = std::move(acrylicBrush);
 			}
-			else if (brush == SolidColor)
+			else if (brush == SolidColor || brush == DynamicColor)
 			{
 				wux::Media::SolidColorBrush solidBrush;
 				solidBrush.Color(tint);
@@ -68,6 +107,10 @@ HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrus
 			}
 
 			info->background.control.Fill(newBrush);
+			if (brush == DynamicColor)
+			{
+				SetDynamicTheme(taskbar, info->background.control, Util::Color::FromABGR(color));
+			}
 		}
 	}
 
@@ -80,6 +123,7 @@ catch (...)
 
 HRESULT TaskbarAppearanceService::SetTaskbarBlur(HWND taskbar, UINT color, FLOAT blurAmount) try
 {
+	RestoreDynamicTheme(taskbar);
 	if (const auto info = GetTaskbarInfo(taskbar))
 	{
 		if (info->background.control && info->background.originalFill)
@@ -108,6 +152,7 @@ catch (...)
 
 HRESULT TaskbarAppearanceService::ReturnTaskbarToDefaultAppearance(HWND taskbar) try
 {
+	RestoreDynamicTheme(taskbar);
 	if (const auto info = GetTaskbarInfo(taskbar))
 	{
 		RestoreDefaultControlFill(info->background);
@@ -145,6 +190,7 @@ catch (...)
 
 HRESULT TaskbarAppearanceService::RestoreAllTaskbarsToDefault() try
 {
+	while (!m_DynamicThemes.empty()) RestoreDynamicTheme(m_DynamicThemes.begin()->first);
 	for (const auto& [handle, info] : m_Taskbars)
 	{
 		RestoreDefaultControlFill(info.background);
@@ -257,6 +303,7 @@ void TaskbarAppearanceService::UnregisterTaskbar(InstanceHandle frameHandle)
 {
 	if (auto it = m_Taskbars.find(frameHandle); it != m_Taskbars.end())
 	{
+		RestoreDynamicTheme(it->second.window);
 		const auto fillProperty = wux::Shapes::Shape::FillProperty();
 		if (it->second.background.fillChangedToken != 0)
 		{

@@ -56,5 +56,37 @@ g++ -std=c++20 -O2 -Wall -Wextra -Werror -pedantic -I Common \
 ```
 
 Configuration/WinRT round-trip tests run in the existing Windows test suite.
+The test executable's activation manifest resolves the local Xaml.dll model;
+it does not register the application globally.
 The final experiment report will record actual Windows behavior, compatibility,
 resource use, capture-backend comparison and remaining limitations.
+
+## Comparison backend and diagnostics
+
+Build with `/p:DynamicBackend=DXGI` to select the comparison implementation.
+The default remains GDI. DXGI duplicates the monitor output and copies only the
+sample rectangle into a reusable staging texture, handling timeout and device
+loss. Rotated outputs are currently unsupported in the experimental DXGI path.
+`capture-probe.exe` checks GDI and DXGI availability on the actual desktop,
+printing HRESULTs and selected colors without modifying the taskbar.
+
+`Tests/dynamic/fixture.ps1` creates only synthetic patterns. Run it in the
+interactive session; Escape closes it. `measure.ps1` collects bounded process
+observations to a specified CSV after a warmup. Keep fixture, measurement
+configuration and visualization connection unchanged between compared runs.
+These are experiment tools, not permanent runtime helpers.
+
+The worker accepts the registered read-only message `TTB_QueryDynamicStats`.
+Its wParam selects samples attempted (0), confirmed color changes (1), actual
+Dynamic appearance applications including event restorations (2), last confirmed
+RGB packed as 0xRRGGBB (3), latest winning run length (4), timer active (5),
+session/display paused (6), or latest sample GetTickCount64 value (7). No log is
+written in the normal capture path. An application count may exceed a color
+change count because real Explorer events require restoration.
+
+For XAML taskbars, Dynamic also requests the light/dark theme with greater
+black/white contrast on that taskbar's XAML root. The chosen RGB is unchanged.
+The original local theme is restored on mode changes, exit and process death.
+This behavior still requires visual validation on each taskbar implementation;
+classic-taskbar contrast is not yet implemented. The fork uses a distinct TAP
+protocol version so it cannot accidentally reuse a stock appearance service.

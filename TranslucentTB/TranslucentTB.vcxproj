@@ -77,6 +77,14 @@
       <SubSystem>Windows</SubSystem>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(DynamicBackend)'=='DXGI'">
+    <ClCompile>
+      <PreprocessorDefinitions>TTB_DYNAMIC_DXGI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="application.cpp" />
     <ClCompile Include="loadabledll.cpp" />

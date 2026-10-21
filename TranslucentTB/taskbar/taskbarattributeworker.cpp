@@ -326,6 +326,22 @@ LRESULT TaskbarAttributeWorker::OnRequestAttributeRefresh(LPARAM lParam)
 
 LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	if (uMsg == m_QueryDynamicStats)
+	{
+		// Read-only counters; no continuous logging or benchmark file writes.
+		switch (wParam)
+		{
+		case 0: return static_cast<LRESULT>(m_DynamicSamples);
+		case 1: return static_cast<LRESULT>(m_DynamicChanges);
+		case 2: return static_cast<LRESULT>(m_DynamicApplications);
+		case 3: return static_cast<LRESULT>(m_DynamicLastRgb);
+		case 4: return static_cast<LRESULT>(m_DynamicLastLength);
+		case 5: return m_DynamicTimer;
+		case 6: return m_DynamicLocked || m_DynamicDisplayOff;
+		case 7: return static_cast<LRESULT>(m_DynamicLastSample);
+		default: return 0;
+		}
+	}
 	if (uMsg == WM_TIMER && wParam == DYNAMIC_TIMER)
 	{
 		SampleDynamic();
@@ -578,9 +594,11 @@ void TaskbarAttributeWorker::ShowTaskbarLine(const TaskbarInfo &taskbar, bool sh
 
 void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppearance config)
 {
+	const bool dynamic = config.Accent == AppearanceAccent::Dynamic;
 	// Resolve application-only Dynamic before either Windows composition path.
 	if (config.Accent == AppearanceAccent::Dynamic)
 	{
+		++m_DynamicApplications;
 		if (const auto color = taskbar->second.DynamicState.color)
 		{
 			config.Color = { color->r, color->g, color->b, 255 };
@@ -601,7 +619,7 @@ void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppea
 		else
 		{
 			auto color = config.Color;
-			TaskbarBrush brush = SolidColor;
+			TaskbarBrush brush = dynamic ? DynamicColor : SolidColor;
 
 			if (config.Accent == AppearanceAccent::Acrylic)
 			{
@@ -665,6 +683,7 @@ void TaskbarAttributeWorker::RefreshAttribute(taskbar_iterator taskbar)
 	const auto taskbarInfo = taskbar->second.Taskbar;
 
 	const auto &cfg = GetConfig(taskbar);
+	if (cfg.Accent != AppearanceAccent::Dynamic) taskbar->second.DynamicState.pending.reset();
 	UpdateDynamicTimer();
 	SetAttribute(taskbar, cfg);
 
@@ -742,11 +761,20 @@ void TaskbarAttributeWorker::SampleDynamic()
 			if (const auto geometry = Dynamic::SampleGeometry({ m.left, m.top, m.right, m.bottom },
 				{ bar.left, bar.top, bar.right, bar.bottom }))
 			{
+				++m_DynamicSamples;
 				result = m_DynamicCapture.Capture(*geometry, it->second.DynamicState.color);
 				steps = geometry->edge == Dynamic::Edge::Bottom ? m.right - m.left : m.bottom - m.top;
 			}
 		}
-		if (it->second.DynamicState.Observe(result, steps, now)) changed.emplace_back(it->first, hwnd);
+		if (result) m_DynamicLastLength = result->length;
+		if (it->second.DynamicState.Observe(result, steps, now))
+		{
+			++m_DynamicChanges;
+			const auto color = *it->second.DynamicState.color;
+			m_DynamicLastRgb = (static_cast<std::uint32_t>(color.r) << 16) |
+				(static_cast<std::uint32_t>(color.g) << 8) | color.b;
+			changed.emplace_back(it->first, hwnd);
+		}
 	}
 	for (const auto &[monitor, hwnd] : changed)
 	{
@@ -1360,6 +1388,7 @@ TaskbarAttributeWorker::TaskbarAttributeWorker(ConfigManager &cfgManager, HINSTA
 	m_FindInStartVisibilityChangeMessage(Window::RegisterMessage(WM_TTBFINDINSTARTVISIBILITYCHANGE)),
 	m_ForceRefreshTaskbar(Window::RegisterMessage(WM_TTBFORCEREFRESHTASKBAR)),
 	m_ApplyColorPreview(Window::RegisterMessage(WM_TTBAPPLYCOLORPREVIEW)),
+	m_QueryDynamicStats(Window::RegisterMessage(L"TTB_QueryDynamicStats")),
 	m_LastExplorerPid(0),
 	m_HookDll(storageFolder, cfgManager.GetConfig().CopyDlls.value_or(true), L"ExplorerHooks.dll"),
 	m_InjectExplorerHook(m_HookDll.GetProc<PFN_INJECT_EXPLORER_HOOK>("InjectExplorerHook")),
@@ -1376,6 +1405,18 @@ TaskbarAttributeWorker::TaskbarAttributeWorker(ConfigManager &cfgManager, HINSTA
 
 	m_PowerSaverHook.reset(RegisterPowerSettingNotification(m_WindowHandle, &GUID_POWER_SAVING_STATUS, DEVICE_NOTIFY_WINDOW_HANDLE));
 	m_DynamicDisplayHook.reset(RegisterPowerSettingNotification(m_WindowHandle, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE));
+	LPWSTR sessionInfo = nullptr;
+	DWORD sessionBytes = 0;
+	if (WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, WTS_CURRENT_SESSION,
+		WTSSessionInfoEx, &sessionInfo, &sessionBytes))
+	{
+		if (sessionBytes >= sizeof(WTSINFOEXW))
+		{
+			const auto info = reinterpret_cast<const WTSINFOEXW *>(sessionInfo);
+			if (info->Level == 1) m_DynamicLocked = info->Data.WTSInfoExLevel1.SessionFlags == WTS_SESSIONSTATE_LOCK;
+		}
+		WTSFreeMemory(sessionInfo);
+	}
 	if (!WTSRegisterSessionNotification(m_WindowHandle, NOTIFY_FOR_THIS_SESSION))
 	{
 		LastErrorHandle(spdlog::level::warn, L"Failed to register Dynamic session notifications");

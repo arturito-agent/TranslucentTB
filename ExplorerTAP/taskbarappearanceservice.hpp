@@ -16,6 +16,8 @@
 #include "ExplorerTAP.h"
 #include "wilx.hpp"
 
+namespace Util { struct Color; }
+
 class TaskbarAppearanceService : public winrt::implements<TaskbarAppearanceService, ITaskbarAppearanceService, IVersionedApi, winrt::non_agile>
 {
 public:
@@ -82,6 +84,14 @@ private:
 	DWORD m_RegisterCookie;
 	std::unordered_map<InstanceHandle, TaskbarInfo> m_Taskbars;
 	std::unordered_set<HWND> m_SubclassedWindows;
+	struct ThemeInfo {
+		wux::FrameworkElement root{ nullptr };
+		wux::ElementTheme original = wux::ElementTheme::Default;
+		bool wasUnset = true;
+	};
+	std::unordered_map<HWND, ThemeInfo> m_DynamicThemes;
+	void RestoreDynamicTheme(HWND taskbar);
+	void SetDynamicTheme(HWND taskbar, const wux::Shapes::Shape &background, const Util::Color &color);
 
 	winrt::Windows::System::DispatcherQueue m_XamlThreadQueue;
 

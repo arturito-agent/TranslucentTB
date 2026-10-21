@@ -3,6 +3,9 @@
 #include <optional>
 #include "dynamic/analysis.hpp"
 #include "dynamic/geometry.hpp"
+#ifdef TTB_DYNAMIC_DXGI
+#include "dynamicdxgi.hpp"
+#endif
 
 namespace Dynamic {
 	class GdiCapture {
@@ -59,4 +62,9 @@ namespace Dynamic {
 				geometry.edge != Edge::Bottom }, previous);
 		}
 	};
+#ifdef TTB_DYNAMIC_DXGI
+	using Capture = DxgiCapture;
+#else
+	using Capture = GdiCapture;
+#endif
 }

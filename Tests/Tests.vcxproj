@@ -40,6 +40,9 @@
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
+    <Manifest Include="dynamic.manifest" />
+  </ItemGroup>
+  <ItemGroup>
     <ResourceCompile Include="Tests.rc2" />
   </ItemGroup>
   <ItemGroup>

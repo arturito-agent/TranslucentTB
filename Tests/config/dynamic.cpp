@@ -6,6 +6,8 @@
 
 TEST(DynamicAppearance, JsonAndWinrtRoundTrip)
 {
+	winrt::init_apartment(winrt::apartment_type::multi_threaded);
+	struct Apartment { ~Apartment() { winrt::uninit_apartment(); } } apartment;
 	rj::GenericDocument<rj::UTF16LE<>> document;
 	document.Parse(L"{\"accent\":\"dynamic\",\"color\":\"#123456FF\"}");
 	ASSERT_FALSE(document.HasParseError());

@@ -8,6 +8,30 @@ permissions:
   contents: read
 
 jobs:
+  capture-tools:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Build standalone Windows capture tools
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          & "$vs\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          cl /nologo /std:c++20 /EHsc /O2 /W4 /WX /I Common Tests\dynamic\capture-probe.cpp /Fe:capture-probe.exe /link user32.lib gdi32.lib d3d11.lib dxgi.lib
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cl /nologo /std:c++20 /EHsc /O2 /W4 /WX /I Common Tests\dynamic\standalone.cpp /Fe:dynamic-tests.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          .\dynamic-tests.exe
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-capture-tools
+          path: |
+            capture-probe.exe
+            dynamic-tests.exe
+            Tests/dynamic/*.ps1
+          retention-days: 14
   build:
     runs-on: windows-2025-vs2026
     timeout-minutes: 60
