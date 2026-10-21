@@ -136,6 +136,15 @@ Benchmarks also record fixture and harness processes separately as test overhead
 values and refuses short/SMOKE data as benchmarks. Its optional DWM stream
 interpolates cumulative CPU at common QPC endpoints only when the observer
 brackets them with gaps of at most six seconds.
+`compare.py <suite-directory> --dwm-observer <observer.csv>` requires a complete
+fifteen-phase suite, real geometry matching its label, full durations/warmups
+and the alternating three-repeat order. It subtracts the arithmetic mean of
+the adjacent baselines from each candidate, preserves negative differences and
+reports repetition values, medians and ranges. Combined CPU includes the app,
+Explorer, DWM and the optional taskbar helper; observer and workload costs stay
+separate. Missing CPU remains unknown. Target private-memory medians are compared
+without adding shared working sets. Bracketing estimates incremental cost; it
+does not establish causation or a statistical confidence interval.
 
 The worker accepts the registered read-only message `TTB_QueryDynamicStats`.
 Its wParam selects samples attempted (0), confirmed color changes (1), actual
