@@ -1,9 +1,10 @@
 param(
-    [ValidateSet('Uniform', 'Continuity', 'Changing', 'Noise', 'Light', 'Dark', 'Border', 'Gradient')]
+    [ValidateSet('Uniform', 'Continuity', 'Changing', 'Interaction', 'Noise', 'Light', 'Dark', 'Border', 'Gradient')]
     [string] $Scenario = 'Continuity',
     [int] $DurationSeconds = 0,
     [ValidateSet('Horizontal', 'Vertical')][string] $Orientation = 'Horizontal',
-    [switch] $AllowDisplaySleep
+    [switch] $AllowDisplaySleep,
+    [switch] $DefineOnly
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
@@ -78,12 +79,32 @@ public sealed class DynamicFixture : Form {
     }
 }
 '@
+if ($DefineOnly) { return }
 [DynamicFixture]::PrepareDisplay(-not $AllowDisplaySleep)
 $form = New-Object DynamicFixture -ArgumentList $Scenario,($Orientation -eq 'Vertical')
 $changeTimer = New-Object System.Windows.Forms.Timer
 $changeTimer.Interval = 2000
-$changeTimer.Add_Tick({ $form.Phase++; $form.Invalidate() })
-if ($Scenario -eq 'Changing') { $changeTimer.Start() }
+$interaction = $null
+if ($Scenario -eq 'Interaction') {
+    $interaction = New-Object DynamicFixture -ArgumentList 'Changing',($Orientation -eq 'Vertical')
+    $interaction.Text = 'Dynamic interaction window'
+    $interaction.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
+    $interaction.Show()
+}
+$changeTimer.Add_Tick({
+    $form.Phase++
+    $form.Invalidate()
+    if ($interaction) {
+        $area = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+        $width = [int]($area.Width * (0.55 + 0.05 * ($form.Phase % 3)))
+        $x = if($form.Phase % 2){$area.Left}else{$area.Right-$width}
+        $interaction.Bounds = New-Object System.Drawing.Rectangle -ArgumentList $x,$area.Top,$width,$area.Height
+        $interaction.Phase = $form.Phase
+        $interaction.Invalidate()
+        if($form.Phase % 2){$interaction.Activate()}else{$form.Activate()}
+    }
+})
+if ($Scenario -in @('Changing','Interaction')) { $changeTimer.Start() }
 $closeTimer = New-Object System.Windows.Forms.Timer
 if ($DurationSeconds -gt 0) {
     $closeTimer.Interval = $DurationSeconds * 1000
@@ -91,4 +112,8 @@ if ($DurationSeconds -gt 0) {
     $closeTimer.Start()
 }
 try { [System.Windows.Forms.Application]::Run($form) }
-finally { $changeTimer.Dispose(); $closeTimer.Dispose(); $form.Dispose(); [DynamicFixture]::ReleaseDisplay() }
+finally {
+    $changeTimer.Dispose(); $closeTimer.Dispose()
+    if($interaction){$interaction.Dispose()}
+    $form.Dispose(); [DynamicFixture]::ReleaseDisplay()
+}

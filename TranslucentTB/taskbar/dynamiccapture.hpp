@@ -14,12 +14,17 @@ namespace Dynamic {
 		HGDIOBJ m_Previous = nullptr;
 		void *m_Bits = nullptr;
 		int m_Width = 0, m_Height = 0;
+		std::uint64_t m_Frames = 0, m_Failures = 0;
+		std::optional<Segment> Failed() noexcept { ++m_Failures; return {}; }
 
 	public:
 		GdiCapture() = default;
 		GdiCapture(const GdiCapture &) = delete;
 		GdiCapture &operator=(const GdiCapture &) = delete;
 		~GdiCapture() { Reset(); }
+		std::uint64_t CompletedFrames() const noexcept { return m_Frames; }
+		std::uint64_t Timeouts() const noexcept { return 0; }
+		std::uint64_t Failures() const noexcept { return m_Failures; }
 
 		void Reset() noexcept
 		{
@@ -35,7 +40,7 @@ namespace Dynamic {
 			const auto rect = geometry.rect;
 			const int width = rect.right - rect.left, height = rect.bottom - rect.top;
 			const HDC screen = GetDC(nullptr);
-			if (!screen) return {};
+			if (!screen) return Failed();
 			struct Release { HDC dc; ~Release() { ReleaseDC(nullptr, dc); } } release{ screen };
 			if (width != m_Width || height != m_Height)
 			{
@@ -49,13 +54,14 @@ namespace Dynamic {
 				info.bmiHeader.biBitCount = 32;
 				info.bmiHeader.biCompression = BI_RGB;
 				if (m_DC) m_Bitmap = CreateDIBSection(screen, &info, DIB_RGB_COLORS, &m_Bits, nullptr, 0);
-				if (!m_Bitmap) { Reset(); return {}; }
+				if (!m_Bitmap) { Reset(); return Failed(); }
 				m_Previous = SelectObject(m_DC, m_Bitmap);
-				if (!m_Previous || m_Previous == HGDI_ERROR) { m_Previous = nullptr; Reset(); return {}; }
+				if (!m_Previous || m_Previous == HGDI_ERROR) { m_Previous = nullptr; Reset(); return Failed(); }
 				m_Width = width; m_Height = height;
 			}
 			if (!BitBlt(m_DC, 0, 0, width, height, screen, rect.left, rect.top, SRCCOPY | CAPTUREBLT) ||
-				!GdiFlush()) return {};
+				!GdiFlush()) return Failed();
+			++m_Frames;
 			const auto stride = static_cast<std::size_t>(width) * 4;
 			return Analyze({ { static_cast<const std::uint8_t *>(m_Bits), stride * height },
 				static_cast<std::size_t>(width), static_cast<std::size_t>(height), stride,

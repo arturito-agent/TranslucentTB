@@ -332,6 +332,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		switch (wParam)
 		{
 		case 255: return 0x44594E01; // Distinguish missing telemetry from valid zero counts.
+		case 254: return 1; // Extended capture-counter capability.
 		case 0: return static_cast<LRESULT>(m_DynamicSamples);
 		case 1: return static_cast<LRESULT>(m_DynamicChanges);
 		case 2: return static_cast<LRESULT>(m_DynamicApplications);
@@ -340,6 +341,9 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		case 5: return m_DynamicTimer;
 		case 6: return m_DynamicLocked || m_DynamicDisplayOff;
 		case 7: return static_cast<LRESULT>(m_DynamicLastSample);
+		case 8: return static_cast<LRESULT>(m_DynamicCapture.CompletedFrames());
+		case 9: return static_cast<LRESULT>(m_DynamicCapture.Timeouts());
+		case 10: return static_cast<LRESULT>(m_DynamicCapture.Failures());
 		default: return 0;
 		}
 	}

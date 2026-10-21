@@ -5,7 +5,8 @@ param(
     [int] $DurationSeconds = 305,
     [int] $IntervalSeconds = 5,
     [int] $TargetProcessId = 0,
-    [string] $Commit = ''
+    [string] $Commit = '',
+    [switch] $SystemOnly
 )
 $ErrorActionPreference = 'Stop'
 if ($WarmupSeconds -lt 0 -or $DurationSeconds -lt 1 -or $IntervalSeconds -lt 1) { throw 'Invalid interval' }
@@ -62,13 +63,17 @@ $logical = [Environment]::ProcessorCount
 $message = [DynamicMetrics]::RegisterWindowMessage('TTB_QueryDynamicStats')
 Start-Sleep -Seconds $WarmupSeconds
 $watch = [Diagnostics.Stopwatch]::StartNew()
-$rows = New-Object 'System.Collections.Generic.List[object]'
+if (Test-Path -LiteralPath $Output) { throw 'Output already exists; choose a new measurement file' }
 $deadline = 0.0
 while ($true) {
     $elapsed = $watch.Elapsed.TotalSeconds
+    $qpc = [Diagnostics.Stopwatch]::GetTimestamp()
+    $rows = New-Object 'System.Collections.Generic.List[object]'
     $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
     $supportsStats = $window -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($window,$message,255) -eq 0x44594E01
-    $processes = @(Get-Process -Name TranslucentTB,explorer,dwm -ErrorAction SilentlyContinue)
+    $captureStats = $supportsStats -and ([DynamicMetrics]::Read($window,$message,254) -band 1) -ne 0
+    $processes = @(if ($SystemOnly) { Get-Process -Name dwm -ErrorAction SilentlyContinue }
+                  else { Get-Process -Name TranslucentTB,explorer,dwm -ErrorAction SilentlyContinue })
     if ($TargetProcessId -gt 0 -and -not ($processes | Where-Object Id -eq $TargetProcessId)) { throw "Target process $TargetProcessId exited during measurement" }
     $processes += Get-Process -Id $PID
     foreach ($process in $processes) {
@@ -79,6 +84,7 @@ while ($true) {
         $dynamic = $supportsStats -and $process.ProcessName -eq 'TranslucentTB'
         $row = [ordered]@{
             label=$Label; commit=$Commit; elapsed_seconds=$elapsed; timestamp_utc=[DateTime]::UtcNow.ToString('o')
+            qpc_ticks=$qpc; qpc_frequency=[Diagnostics.Stopwatch]::Frequency
             process=$process.ProcessName; pid=$process.Id; logical_processors=$logical
             role=$(if($process.Id -eq $PID){'observer'}elseif($process.ProcessName -eq 'TranslucentTB'){'target'}elseif($process.ProcessName -eq 'dwm'){'compositor'}else{'shell'})
             cpu_seconds=$native.CpuSeconds
@@ -95,14 +101,18 @@ while ($true) {
             dynamic_run_length=$(if($dynamic){[DynamicMetrics]::Read($window,$message,4)}else{$null})
             dynamic_timer=$(if($dynamic){[DynamicMetrics]::Read($window,$message,5)}else{$null})
             dynamic_paused=$(if($dynamic){[DynamicMetrics]::Read($window,$message,6)}else{$null})
+            capture_stats_available=($dynamic -and $captureStats)
+            captured_frames=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,8)}else{$null})
+            capture_timeouts=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,9)}else{$null})
+            capture_failures=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,10)}else{$null})
             errors=($readErrors -join '|')
         }
         $rows.Add([pscustomobject]$row)
     }
+    $rows | Export-Csv -LiteralPath $Output -NoTypeInformation -Encoding UTF8 -Append
     if ($elapsed -ge $DurationSeconds) { break }
     do { $deadline += $IntervalSeconds } while ($deadline -le $watch.Elapsed.TotalSeconds)
     $remaining = [Math]::Min($deadline,$DurationSeconds) - $watch.Elapsed.TotalSeconds
     if ($remaining -gt 0) { Start-Sleep -Milliseconds ([int][Math]::Ceiling($remaining * 1000)) }
 }
-$rows | Export-Csv -LiteralPath $Output -NoTypeInformation -Encoding UTF8
-Write-Output "Saved $($rows.Count) process observations to $Output"
+Write-Output "Saved process observations through $elapsed seconds to $Output"

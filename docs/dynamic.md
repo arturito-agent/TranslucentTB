@@ -8,8 +8,11 @@ In JSON, set `"accent": "dynamic"` on any supported appearance or rule.
 
 This is an experiment in progress. The native menu, bottom-taskbar color,
 configuration persistence and exit restoration were exercised on Windows 11
-26100.8875 with revision 3ea6890. Full integration coverage, benchmarks and lateral
-taskbar compatibility remain pending. No performance result is claimed.
+26100.8875 with revision 3ea6890. Revision a6ad586 passes the six synthetic
+color/continuity cases on a real left taskbar with both GDI and DXGI. Classic
+taskbar glyph contrast still follows the system theme and fails on some dark
+backgrounds. See [validation status](dynamic-validation.md). Full integration
+coverage and benchmarks remain pending. No performance result is claimed.
 
 ## Sampling and selection
 
@@ -89,12 +92,29 @@ observations to a specified CSV after a warmup. Keep fixture, measurement
 configuration and visualization connection unchanged between compared runs.
 These are experiment tools, not permanent runtime helpers.
 
+`functional.ps1` verifies six scenes against both the worker's chosen RGB and
+the actual taskbar pixel. `latency.ps1` measures internal-content or foreground
+switches with a 50ms polling observer; run it separately from resource trials.
+`benchmark.ps1` validates hashes from a three-build JSON manifest and executes
+baseline/candidate/baseline phases, alternating GDI/DXGI order over three
+repeats. It gracefully closes each target and restores the prior test-build
+configuration. Its `-Smoke` mode uses short intervals labeled SMOKE and is only
+an orchestration check. Normal mode requires 120s warmup and at least 300s
+measured per phase. Explorer is restarted identically before every phase because
+the injected service remains pinned until its process exits. Keep an unrelated
+Windows desktop controller's shell/virtual-desktop references fresh afterwards.
+
 The collector includes a final endpoint, checks an optional target PID, keeps
 the observer's costs separate, and leaves unavailable metrics empty with an
 error reason instead of omitting the process or reporting zero. Protected DWM
 CPU counters may need a separate elevated read-only observer. The instance can
 be queried or closed gracefully with `session.ps1`, which checks its executable
 path and the ownership of both native windows before acting.
+For that separate observer, use `measure.ps1 -SystemOnly` through the diagnostic
+transport; this never launches or controls a desktop application. Both streams
+include the machine's monotonic QPC ticks/frequency for alignment. Guest wall
+clock configuration must be recorded separately. The CSV streams each observation
+batch so a failed long run retains diagnostic data. An existing output is rejected.
 
 The worker accepts the registered read-only message `TTB_QueryDynamicStats`.
 Its wParam selects samples attempted (0), confirmed color changes (1), actual
@@ -105,6 +125,11 @@ returns the protocol marker 0x44594E01. Match both the worker class and its
 `TTB_WorkerWindow` caption; an empty string caption does not match it. No log is
 written in the normal capture path. An application count may exceed a color
 change count because real Explorer events require restoration.
+Field 254 is a capability mask: bit 0 enables completed capture frames (8),
+DXGI wait timeouts (9) and capture failures (10). These cumulative counters
+survive resource resets. A timeout may reuse a cached result and is not a new
+captured frame. The collector distinguishes attempts from completed frames and
+leaves extended fields empty for older revisions.
 
 For XAML taskbars, Dynamic also requests the light/dark theme with greater
 black/white contrast on that taskbar's XAML root. The chosen RGB is unchanged.

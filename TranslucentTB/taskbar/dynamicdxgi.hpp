@@ -21,6 +21,8 @@ namespace Dynamic {
 		std::optional<Rgb> m_LastPrevious;
 		std::optional<Geometry> m_LastGeometry;
 		HRESULT m_Error = S_OK;
+		std::uint64_t m_Frames = 0, m_Timeouts = 0, m_Failures = 0;
+		std::optional<Segment> Failed() noexcept { ++m_Failures; return {}; }
 
 		HRESULT Initialize(HMONITOR monitor) noexcept
 		{
@@ -67,38 +69,42 @@ namespace Dynamic {
 			m_Last.reset(); m_LastPrevious.reset(); m_LastGeometry.reset();
 		}
 		HRESULT LastError() const noexcept { return m_Error; }
+		std::uint64_t CompletedFrames() const noexcept { return m_Frames; }
+		std::uint64_t Timeouts() const noexcept { return m_Timeouts; }
+		std::uint64_t Failures() const noexcept { return m_Failures; }
 
 		std::optional<Segment> Capture(Geometry geometry, std::optional<Rgb> previous) noexcept
 		{
 			const auto r = geometry.rect;
 			RECT region{ r.left, r.top, r.right, r.bottom };
 			const auto monitor = MonitorFromRect(&region, MONITOR_DEFAULTTONULL);
-			if (!monitor) { m_Error = E_INVALIDARG; return {}; }
+			if (!monitor) { m_Error = E_INVALIDARG; return Failed(); }
 			if (monitor != m_Monitor)
 			{
 				Reset();
 				m_Error = Initialize(monitor);
-				if (FAILED(m_Error)) { Reset(); return {}; }
+				if (FAILED(m_Error)) { Reset(); return Failed(); }
 			}
 			DXGI_OUTDUPL_FRAME_INFO info{};
 			Ptr<IDXGIResource> resource;
 			m_Error = m_Duplication->AcquireNextFrame(16, &info, &resource);
 			if (m_Error == DXGI_ERROR_WAIT_TIMEOUT)
 			{
+				++m_Timeouts;
 				// Reuse only a result from the identical geometry AND tie-break state.
 				if (m_LastGeometry && m_LastGeometry->rect == r && m_LastGeometry->edge == geometry.edge &&
 					m_LastPrevious == previous) return m_Last;
 				return {};
 			}
-			if (FAILED(m_Error)) { Reset(); return {}; }
+			if (FAILED(m_Error)) { Reset(); return Failed(); }
 			struct Frame { IDXGIOutputDuplication *duplication; ~Frame() { duplication->ReleaseFrame(); } } frame{ m_Duplication.Get() };
 			Ptr<ID3D11Texture2D> texture;
 			m_Error = resource.As(&texture);
-			if (FAILED(m_Error)) return {};
+			if (FAILED(m_Error)) return Failed();
 			const auto width = static_cast<UINT>(r.right - r.left);
 			const auto height = static_cast<UINT>(r.bottom - r.top);
 			if (r.left < m_Desktop.left || r.top < m_Desktop.top ||
-				r.right > m_Desktop.right || r.bottom > m_Desktop.bottom) { m_Error = E_INVALIDARG; return {}; }
+				r.right > m_Desktop.right || r.bottom > m_Desktop.bottom) { m_Error = E_INVALIDARG; return Failed(); }
 			if (width != m_Width || height != m_Height)
 			{
 				m_Staging.Reset();
@@ -107,7 +113,7 @@ namespace Dynamic {
 				desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; desc.SampleDesc.Count = 1;
 				desc.Usage = D3D11_USAGE_STAGING; desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 				m_Error = m_Device->CreateTexture2D(&desc, nullptr, &m_Staging);
-				if (FAILED(m_Error)) return {};
+				if (FAILED(m_Error)) return Failed();
 				m_Width = width; m_Height = height;
 			}
 			const D3D11_BOX box{ static_cast<UINT>(r.left - m_Desktop.left),
@@ -116,11 +122,12 @@ namespace Dynamic {
 			m_Context->CopySubresourceRegion(m_Staging.Get(), 0, 0, 0, 0, texture.Get(), 0, &box);
 			D3D11_MAPPED_SUBRESOURCE mapped{};
 			m_Error = m_Context->Map(m_Staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-			if (FAILED(m_Error)) return {};
+			if (FAILED(m_Error)) return Failed();
 			m_Last = Analyze({ {static_cast<const std::uint8_t *>(mapped.pData),
 				static_cast<std::size_t>(mapped.RowPitch) * height}, width, height, mapped.RowPitch,
 				geometry.edge != Edge::Bottom }, previous);
 			m_Context->Unmap(m_Staging.Get(), 0);
+			++m_Frames;
 			m_LastPrevious = previous; m_LastGeometry = geometry;
 			return m_Last;
 		}
