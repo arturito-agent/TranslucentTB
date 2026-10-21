@@ -100,6 +100,30 @@ that is already off. A console key supplies that wake. Paused runs are rejected.
 The adjacent strip includes visible window frames and scrollbars, which can
 determine its color.
 
+For a real browser content check, open `Tests/dynamic/browser-fixture.html` as a
+local file in Edge after resource measurements finish. Its centered controls
+stay away from the adjacent edge. Scroll advances four full-height synthetic
+sections; Change theme repaints the same focused window; Start scroll cycle
+advances every 3.5 seconds. All content is local and requires no network.
+Play video uses an optional `dynamic-video.webm` beside the HTML. Generate the
+synthetic 16-second, 30fps clip on the host outside measured intervals:
+
+```sh
+ffmpeg -f lavfi -i 'color=c=0xf8f8f8:s=640x360:r=30:d=4' \
+  -f lavfi -i 'color=c=0x101010:s=640x360:r=30:d=4' \
+  -f lavfi -i 'color=c=0x2060a0:s=640x360:r=30:d=4' \
+  -f lavfi -i 'color=c=0xf00000:s=640x360:r=30:d=4' \
+  -filter_complex '[0:v][1:v][2:v][3:v]concat=n=4:v=1:a=0[v]' \
+  -map '[v]' -an -c:v libvpx -b:v 200k -deadline good -cpu-used 4 \
+  local-files/dynamic-video.webm
+```
+
+Copy the clip beside the guest's HTML; keep generated media in ignored local
+files on the host. Codec color conversion can shift RGB: compare the actual
+decoded adjacent strip, not the encoder's input palette. These browser checks
+are separate from the resource suite and do not themselves establish latency
+percentiles or resource budgets. Record failures and actual taskbar geometry.
+
 `functional.ps1` verifies six scenes against both the worker's chosen RGB and
 the actual taskbar pixel. `latency.ps1` measures internal-content or foreground
 switches with a 50ms polling observer; run it separately from resource trials.
