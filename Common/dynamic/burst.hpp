@@ -1,19 +1,23 @@
 #pragma once
-#include <algorithm>
 #include <cstdint>
+#include <algorithm>
 
 namespace Dynamic {
-// One bounded confirmation burst per event group; no periodic idle work.
+// A fixed three-read burst. Content noise cannot extend it or start >1 burst/2s.
+// A real foreground/state change may supersede an old burst immediately.
 struct Burst {
 	unsigned remaining = 0;
-	std::uint64_t due = 0;
+	std::uint64_t due = 0, nextContent = 0;
 
-	void Request(std::uint64_t now) noexcept
+	bool Request(std::uint64_t now, bool important = false) noexcept
 	{
-		if (!remaining) due = now + 200;
-		remaining = 3; // A new event during a burst gets fresh confirmation opportunities.
+		if (!important && remaining) return false;
+		due = important ? now + 200 : std::max(now + 200, nextContent);
+		remaining = 3;
+		nextContent = due + 1800;
+		return true;
 	}
-	void Cancel() noexcept { remaining = 0; due = 0; }
+	void Cancel() noexcept { remaining = 0; due = 0; nextContent = 0; }
 	void Consumed(std::uint64_t now) noexcept
 	{
 		if (remaining && --remaining) due = now + (remaining == 2 ? 300 : 500);

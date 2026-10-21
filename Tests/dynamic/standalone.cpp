@@ -1,5 +1,6 @@
 #include "dynamic/analysis.hpp"
 #include "dynamic/burst.hpp"
+#include "dynamic/transition.hpp"
 #include "config/appearanceaccent.hpp"
 #include "dynamic/geometry.hpp"
 #include <cstdlib>
@@ -45,19 +46,18 @@ namespace {
 			for (std::size_t b = a; b < pixels.size(); ++b)
 			{
 				bool same = true;
-				unsigned r = 0, g = 0, bl = 0;
+
 				for (auto i = a; i <= b; ++i)
 				{
 					same &= Dynamic::Key(pixels[i]) == Dynamic::Key(pixels[a]);
-					r += pixels[i].r; g += pixels[i].g; bl += pixels[i].b;
+
 				}
 				if (!same) continue;
 				const auto n = b - a + 1;
 				const bool preferred = previous && Dynamic::Key(pixels[a]) == Dynamic::Key(*previous);
 				const bool oldPreferred = previous && Dynamic::Key(best.color) == Dynamic::Key(*previous);
 				if (n > best.length || (n == best.length && preferred && !oldPreferred))
-					best = { { static_cast<std::uint8_t>(r / n), static_cast<std::uint8_t>(g / n),
-						static_cast<std::uint8_t>(bl / n) }, a, n };
+					best = { pixels[a + n / 2], a, n };
 			}
 		}
 		return best;
@@ -70,7 +70,7 @@ int main()
 		Check(Dynamic::Representative({ red, red, blue, blue }) == red, "2:2 first sample");
 		Check(Dynamic::Representative({ red, red, blue, blue }, blue) == blue, "2:2 previous bucket");
 		Check(Dynamic::Representative({ red, green, blue, blue }, red) == blue, "majority beats history");
-		Check(Dynamic::Representative({ Rgb{4,5,6}, Rgb{7,6,5}, red, blue }) == Rgb{5,5,5}, "bucket mean");
+		Check(Dynamic::Representative({ Rgb{4,5,6}, Rgb{7,6,5}, red, blue }) == Rgb{4,5,6}, "exact source pixel in winning bucket");
 		std::vector<Rgb> t2(300, red);
 		t2.insert(t2.end(), 450, blue); t2.insert(t2.end(), 300, red);
 		for (bool vertical : { false, true })
@@ -123,11 +123,32 @@ int main()
 		burst.Request(1000);
 		Check(burst.remaining == 3 && burst.due == 1200, "event arms delayed capture");
 		burst.Request(1100);
-		Check(burst.remaining == 3 && burst.due == 1200, "event storm does not postpone first capture");
+		Check(burst.remaining == 3 && burst.due == 1200, "event storm cannot extend active burst");
 		burst.Consumed(1200);
 		Check(burst.remaining == 2 && burst.due == 1500, "second read confirms color");
 		burst.Consumed(1500); burst.Consumed(2000);
 		Check(burst.remaining == 0 && burst.due == 0, "burst ends without periodic work");
+		Check(burst.Request(2001) && burst.due == 3000, "content event during cooldown is delayed rather than lost");
+		Check(burst.Request(2100, true), "real window switch overrides cooldown");
+		burst.Consumed(2300);
+		Check(!burst.Request(2350) && burst.remaining == 2, "noise cannot replenish consumed reads");
+		burst.Cancel();
+		const Dynamic::Segment closeColor{Rgb{0,0,241},0,100};
+		Check(!state.Observe(closeColor,1000,2000), "one-channel exact change awaits confirmation");
+		Check(state.Observe(closeColor,1000,2200) && state.color == closeColor.color, "same bucket RGB change is preserved exactly");
+		for (bool vertical : {false,true}) {
+			const auto exact = Dynamic::Analyze(Image({Rgb{4,5,6},Rgb{7,6,5},Rgb{6,7,4}},vertical).View());
+			Check(exact && exact->color == Rgb{7,6,5}, "segment midpoint is an actual source pixel");
+		}
+		Dynamic::Transition fade;
+		fade.Snap(red); fade.Start(blue,1000);
+		Check(fade.active && fade.At(1000) == red, "fade starts at displayed color");
+		Check(fade.At(1120) == Rgb{120,0,120}, "smooth fade midpoint");
+		fade.Start(green,1120);
+		Check(fade.At(1120) == Rgb{120,0,120}, "new destination starts from current transition");
+		Check(fade.Step(1360) == green && !fade.active, "fade ends at exact target and becomes idle");
+		fade.Start(green,1500);
+		Check(!fade.active, "identical target creates no animation");
 		burst.Request(3000); burst.Cancel();
 		Check(burst.remaining == 0 && burst.due == 0, "deactivation cancels all pending work");
 		Check(ScopedAppearanceAccent(AppearanceAccent::DynamicV2, false) == AppearanceAccent::Opaque,

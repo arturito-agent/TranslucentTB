@@ -3,6 +3,8 @@
 #include <RpcProxy.h>
 #include <shellapi.h>
 #include <cmath>
+#include <chrono>
+#include <winrt/Windows.UI.ViewManagement.h>
 #include <wil/cppwinrt_helpers.h>
 #include <winrt/Windows.Management.Deployment.h>
 
@@ -20,6 +22,11 @@ DWORD TaskbarAppearanceService::s_ProxyStubRegistrationCookie = 0;
 
 void TaskbarAppearanceService::RestoreDynamicTheme(HWND taskbar)
 {
+	if (const auto paint = m_DynamicPaints.find(taskbar); paint != m_DynamicPaints.end())
+	{
+		if (paint->second.animation) paint->second.animation.Stop();
+		m_DynamicPaints.erase(paint);
+	}
 	if (const auto it = m_DynamicThemes.find(taskbar); it != m_DynamicThemes.end())
 	{
 		const auto info = it->second;
@@ -78,6 +85,7 @@ HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrus
 	if (brush != DynamicColor) RestoreDynamicTheme(taskbar);
 	if (const auto info = GetTaskbarInfo(taskbar))
 	{
+		if (brush == DynamicColor && (!info->background.control || !info->background.originalFill)) return E_PENDING;
 		if (info->background.control && info->background.originalFill)
 		{
 			EnsureSubclass(taskbar);
@@ -98,11 +106,37 @@ HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrus
 
 				newBrush = std::move(acrylicBrush);
 			}
-			else if (brush == SolidColor || brush == DynamicColor)
+			else if (brush == DynamicColor)
+			{
+				auto &paint = m_DynamicPaints[taskbar];
+				const bool existing = static_cast<bool>(paint.brush);
+				if (!existing) paint.brush = wux::Media::SolidColorBrush(tint);
+				if (existing && paint.target == color && info->background.control.Fill() == paint.brush) return S_OK;
+				const auto displayed = paint.brush.Color();
+				if (paint.animation) paint.animation.Stop();
+				paint.animation = nullptr;
+				paint.brush.Color(tint); // Exact base value remains after the animation ends.
+				paint.target = color;
+				newBrush = paint.brush;
+				if (existing && winrt::Windows::UI::ViewManagement::UISettings().AnimationsEnabled())
+				{
+					wux::Media::Animation::ColorAnimation fade;
+					fade.From(displayed); fade.To(tint);
+					fade.Duration(wux::DurationHelper::FromTimeSpan(std::chrono::milliseconds(240)));
+					fade.EnableDependentAnimation(false);
+					wux::Media::Animation::CubicEase easing;
+					easing.EasingMode(wux::Media::Animation::EasingMode::EaseInOut);
+					fade.EasingFunction(easing);
+					wux::Media::Animation::Storyboard::SetTarget(fade,paint.brush);
+					wux::Media::Animation::Storyboard::SetTargetProperty(fade,L"Color");
+					paint.animation = wux::Media::Animation::Storyboard();
+					paint.animation.Children().Append(fade);
+				}
+			}
+			else if (brush == SolidColor)
 			{
 				wux::Media::SolidColorBrush solidBrush;
 				solidBrush.Color(tint);
-
 				newBrush = std::move(solidBrush);
 			}
 
@@ -110,11 +144,13 @@ HRESULT TaskbarAppearanceService::SetTaskbarAppearance(HWND taskbar, TaskbarBrus
 			if (brush == DynamicColor)
 			{
 				SetDynamicTheme(taskbar, info->background.control, Util::Color::FromABGR(color));
+				if (const auto paint = m_DynamicPaints.find(taskbar); paint != m_DynamicPaints.end() && paint->second.animation)
+					paint->second.animation.Begin();
 			}
 		}
 	}
 
-	return S_OK;
+	return brush == DynamicColor && !GetTaskbarInfo(taskbar) ? E_PENDING : S_OK;
 }
 catch (...)
 {
@@ -303,7 +339,7 @@ void TaskbarAppearanceService::UnregisterTaskbar(InstanceHandle frameHandle)
 {
 	if (auto it = m_Taskbars.find(frameHandle); it != m_Taskbars.end())
 	{
-		RestoreDynamicTheme(it->second.window);
+		RestoreDynamicTheme(GetAncestor(it->second.window, GA_PARENT));
 		const auto fillProperty = wux::Shapes::Shape::FillProperty();
 		if (it->second.background.fillChangedToken != 0)
 		{

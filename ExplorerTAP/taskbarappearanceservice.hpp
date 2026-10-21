@@ -10,6 +10,7 @@
 #include <winrt/Windows.UI.Xaml.Media.h>
 #include <winrt/Windows.UI.Xaml.Shapes.h>
 #include <winrt/Windows.UI.Xaml.Hosting.h>
+#include <winrt/Windows.UI.Xaml.Media.Animation.h>
 #include "redefgetcurrenttime.h"
 #include <wil/resource.h>
 
@@ -90,6 +91,12 @@ private:
 		bool wasUnset = true;
 	};
 	std::unordered_map<HWND, ThemeInfo> m_DynamicThemes;
+	struct DynamicPaint {
+		wux::Media::SolidColorBrush brush{nullptr};
+		wux::Media::Animation::Storyboard animation{nullptr};
+		UINT target = 0;
+	};
+	std::unordered_map<HWND, DynamicPaint> m_DynamicPaints;
 	void RestoreDynamicTheme(HWND taskbar);
 	void SetDynamicTheme(HWND taskbar, const wux::Shapes::Shape &background, const Util::Color &color);
 

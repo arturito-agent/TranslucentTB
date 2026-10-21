@@ -35,17 +35,8 @@ namespace Dynamic {
 				most = count;
 			}
 		}
-		// Mean only the winning bucket across the strip's thickness.
-		unsigned r = 0, g = 0, b = 0, count = 0;
-		for (const auto c : pixels)
-		{
-			if (Key(c) == Key(pixels[winner]))
-			{
-				r += c.r; g += c.g; b += c.b; ++count;
-			}
-		}
-		return { static_cast<std::uint8_t>(r / count), static_cast<std::uint8_t>(g / count),
-			static_cast<std::uint8_t>(b / count) };
+		// Return a real source pixel, never a synthesized average.
+		return pixels[winner];
 	}
 
 	struct Segment {
@@ -82,7 +73,6 @@ namespace Dynamic {
 		Segment best;
 		std::size_t start = 0, length = 0;
 		std::uint32_t key = 0;
-		std::uint64_t r = 0, g = 0, b = 0;
 		const auto finish = [&]
 		{
 			if (!length) return;
@@ -90,8 +80,9 @@ namespace Dynamic {
 			const bool wasPreferred = previous && Key(best.color) == Key(*previous);
 			if (length > best.length || (length == best.length && preferred && !wasPreferred))
 			{
-				best = { { static_cast<std::uint8_t>(r / length),
-					static_cast<std::uint8_t>(g / length), static_cast<std::uint8_t>(b / length) }, start, length };
+				std::array<Rgb, 4> middle;
+				for (std::size_t j = 0; j < 4; ++j) middle[j] = strip.Read(start + length / 2, j);
+				best = { Representative(middle, previous), start, length };
 			}
 		};
 		for (std::size_t i = 0; i < steps; ++i)
@@ -102,10 +93,10 @@ namespace Dynamic {
 			if (length && Key(c) != key)
 			{
 				finish();
-				length = 0; r = g = b = 0;
+				length = 0;
 			}
 			if (!length) { start = i; key = Key(c); }
-			++length; r += c.r; g += c.g; b += c.b;
+			++length;
 		}
 		finish();
 		return best;
@@ -123,12 +114,12 @@ namespace Dynamic {
 				pending.reset();
 				return false;
 			}
-			if (color && Key(segment->color) == Key(*color))
+			if (color && segment->color == *color)
 			{
 				pending.reset();
 				return false;
 			}
-			if (!pending || Key(*pending) != Key(segment->color))
+			if (!pending || *pending != segment->color)
 			{
 				pending = segment->color;
 				since = now;

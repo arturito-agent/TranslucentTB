@@ -34,6 +34,7 @@
 #include "../managers/configmanager.hpp"
 #include "dynamiccapture.hpp"
 #include "dynamic/burst.hpp"
+#include "dynamic/transition.hpp"
 
 enum class TaskbarType {
 	Unknown,
@@ -60,6 +61,8 @@ private:
 		std::unordered_set<Window> NormalWindows;
 		Dynamic::Stability DynamicState;
 		bool DynamicV2Active = false;
+		std::optional<std::uint32_t> DynamicTarget;
+		Dynamic::Transition DynamicFade;
 		std::unique_ptr<Dynamic::Capture> DynamicCapture;
 	};
 
@@ -103,6 +106,14 @@ private:
 	bool m_DynamicV2Timer = false;
 	Dynamic::Burst m_DynamicV2Burst;
 	std::uint64_t m_DynamicV2Triggers = 0;
+		bool m_DynamicAnimationTimer = false;
+		std::uint64_t m_DynamicDuplicateColors = 0, m_DynamicAnimationFrames = 0;
+		std::uint64_t m_DynamicContentEvents = 0, m_DynamicFilteredEvents = 0;
+		HWND m_DynamicEventWindow = nullptr;
+		std::optional<RECT> m_DynamicEventRect;
+		std::optional<std::wstring> m_DynamicEventTitle;
+		HWND m_DynamicSelectionWindow = nullptr;
+		LONG m_DynamicSelectionObject = 0, m_DynamicSelectionChild = 0;
 	bool m_DynamicFocusTimer = false;
 	bool m_DynamicLocked = false;
 	bool m_DynamicDisplayOff = false;
@@ -135,6 +146,7 @@ private:
 	static constexpr UINT_PTR DYNAMIC_TIMER = 0x44594E;
 	static constexpr UINT_PTR DYNAMIC_FOCUS_TIMER = 0x44594F;
 	static constexpr UINT_PTR DYNAMIC_V2_TIMER = 0x445951;
+		static constexpr UINT_PTR DYNAMIC_ANIMATION_TIMER = 0x445952;
 	static constexpr UINT_PTR DYNAMIC_RECOVERY_TIMER = 0x445950;
 	bool HasConfiguredDynamic() const;
 	void UpdateDynamicRecoveryTimer();
@@ -143,7 +155,11 @@ private:
 	void ResetDynamicCaptures();
 	void RequestDynamicFocusSample();
 	void SampleDynamic(bool eventDriven = false);
-	void RequestDynamicV2Sample();
+	void RequestDynamicV2Sample(bool important = false);
+		void UpdateDynamicContentHooks(bool active);
+		void UpdateDynamicAnimationTimer();
+		void StepDynamicAnimations();
+		bool ApplyDynamicClassicColor(MonitorInfo &info, Dynamic::Rgb color);
 	void ArmDynamicV2Timer();
 	void CancelDynamicV2();
 	void CALLBACK OnDynamicContentEvent(DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD thread, DWORD time);
