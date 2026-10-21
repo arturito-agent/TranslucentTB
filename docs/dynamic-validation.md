@@ -99,6 +99,17 @@ timer=0, paused=0, Desktop=Clear, context bit64. The app exits gracefully and it
 configuration is restored. This validates diagnostics and inactive capture,
 not display-off or actual session-lock behavior.
 
+The extended five-phase right/static diagnostic on 753ad89 also passes. Every
+phase observes 90 seconds after a two-second diagnostic warmup; actual taskbar
+bounds remain (1218,0)..(1280,800), DPI 96. Both candidates retain active,
+unpaused sampling, the exact static RGB and zero scheduler stops/creation
+failures. GDI attempts and frames advance 8 to 184; DXGI attempts advance 8 to
+183 and frames 3 to 7. All phase GPU streams match their CPU batch identity,
+scope and QPC bounds. All five graceful exits, driver and fixture closure are
+verified. See the [diagnostic receipt](dynamic-results/smoke-right-scheduler-753a.json).
+This establishes five-restart sequencing and short sampler health, not a full
+resource comparison or prolonged stability.
+
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests
 and an actual short collector/summary on a hosted Windows Server2025 runner.

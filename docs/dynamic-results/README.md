@@ -78,3 +78,9 @@ do not establish long-series health or resource budgets.
 while Desktop Clear is selected. Its expected rejection and failure-only
 scheduler snapshot pass; capture attempts and frames remain zero. This is a
 diagnostic-tool check and inactive-mode test, not an application failure.
+
+`smoke-right-scheduler-753a.json` summarizes the five-phase, 90-second-per-phase
+right/static diagnostic. Exact physical geometry, healthy sampler progression,
+zero scheduler stops/creation failures, matching scoped GPU batches and all
+graceful target exits pass. Its short warmup and SMOKE labels exclude it from
+resource budget claims.

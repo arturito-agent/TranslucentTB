@@ -1,0 +1,63 @@
+{
+  "diagnostic_only": true,
+  "resource_budget_claim": false,
+  "position": "Right",
+  "taskbar_bounds": [
+    1218,
+    0,
+    1280,
+    800
+  ],
+  "dpi": 96,
+  "observed_seconds_per_phase": 90,
+  "phases": [
+    {
+      "backend": "baseline",
+      "commit": "7d644774045429a98c07678df553b771e3b5d129",
+      "pid": 280,
+      "target_observations": 19,
+      "gpu_batches": 19
+    },
+    {
+      "backend": "gdi",
+      "commit": "753ad89ab3492098316a3015bbfc0a4539f415ba",
+      "pid": 5460,
+      "target_observations": 19,
+      "attempts_start": 8,
+      "attempts_end": 184,
+      "completed_frames_start": 8,
+      "completed_frames_end": 184,
+      "stops": 0,
+      "timer_failures": 0,
+      "gpu_batches": 19
+    },
+    {
+      "backend": "baseline",
+      "commit": "7d644774045429a98c07678df553b771e3b5d129",
+      "pid": 3484,
+      "target_observations": 20,
+      "gpu_batches": 20
+    },
+    {
+      "backend": "dxgi",
+      "commit": "753ad89ab3492098316a3015bbfc0a4539f415ba",
+      "pid": 112,
+      "target_observations": 19,
+      "attempts_start": 8,
+      "attempts_end": 183,
+      "completed_frames_start": 3,
+      "completed_frames_end": 7,
+      "stops": 0,
+      "timer_failures": 0,
+      "gpu_batches": 19
+    },
+    {
+      "backend": "baseline",
+      "commit": "7d644774045429a98c07678df553b771e3b5d129",
+      "pid": 4340,
+      "target_observations": 19,
+      "gpu_batches": 19
+    }
+  ],
+  "passed": true
+}
