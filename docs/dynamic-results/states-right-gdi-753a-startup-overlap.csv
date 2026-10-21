@@ -1,0 +1,6 @@
+"case","stage","expected_dynamic","timer","samples_start","samples_end","confirmed_rgb","confirmed_changes","expected_taskbar_rgb","taskbar_pixel_rgb","maximized","title","foreground_class","foreground_pid","expected_worker_pid","passed","qpc_ticks","qpc_frequency"
+"MaximizedClear","0","True","1","14","18","16316664","1","16316664","16316664","False","Dynamic maximize fixture","WindowsForms10.Window.8.app.0.28d3b96_r13_ad1","3272","1396","True","243762084602","10000000"
+"MaximizedClear","1","False","0","18","18","16316664","1","16316664","2119945","True","Dynamic maximize fixture","WindowsForms10.Window.8.app.0.28d3b96_r13_ad1","3272","1396","True","243804101076","10000000"
+"MaximizedClear","2","True","1","23","27","16316664","1","16316664","16316664","False","Dynamic maximize fixture","WindowsForms10.Window.8.app.0.28d3b96_r13_ad1","3272","1396","True","243845914141","10000000"
+"MaximizedClear","3","False","0","27","27","16316664","1","16316664","2119945","True","Dynamic maximize fixture","WindowsForms10.Window.8.app.0.28d3b96_r13_ad1","3272","1396","True","243887588030","10000000"
+"MaximizedClear","4","True","1","32","36","16316664","1","16316664","2109504","False","Dynamic maximize fixture","WindowsForms10.Window.8.app.0.28d3b96_r13_ad1","3272","1396","False","243929677041","10000000"

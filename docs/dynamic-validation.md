@@ -110,6 +110,33 @@ verified. See the [diagnostic receipt](dynamic-results/smoke-right-scheduler-753
 This establishes five-restart sequencing and short sampler health, not a full
 resource comparison or prolonged stability.
 
+The first current GDI Maximized Clear test overlaps a delayed TaskbarCreated
+broadcast from Explorer startup. Its last Dynamic stage samples correctly but
+renders the known fallback after the worker's per-monitor state resets; the
+test instead expects the earlier lifetime confirmed RGB and fails. A debug
+repeat records the same overlap. After a 35-second shell preparation interval,
+the unchanged five-stage assertion passes, with only the initial worker reset
+in the debug log. This diagnoses a state-test precondition; it does not verify
+all reconstruction recovery or change the application's rendering policy.
+The [original overlap](dynamic-results/states-right-gdi-753a-startup-overlap.csv)
+and [settled repeat](dynamic-results/states-right-gdi-753a-settled.csv) are retained.
+The full current state matrix remains in progress.
+
+The first Start state run correctly activates and stops sampling but fails the
+pixel assertion at (1249,10). A separate point/owner diagnostic identifies that
+point as the pressed `Start` button, RGB 5069158. The plain task-list background
+at (1249,400) and the other tested background points is the expected fallback
+RGB 2109504. The state harness now probes a fixed empty background location in
+this few-window fixture and records the exact point/window class; the color
+assertion remains exact. The revised helper compiles in the actual Windows VM;
+all five revised GDI Start stages now pass, probing `MSTaskListWClass` at
+(1249,400), with three active Dynamic stages and two stopped Clear stages.
+The full positive state matrix is still running. The
+[failed leading-edge probe](dynamic-results/states-right-gdi-753a-start-button-probe.csv)
+and [point diagnostic](dynamic-results/start-pixel-gdi-753a.json) remain available.
+The [positive GDI Start receipt](dynamic-results/states-right-gdi-Start-753a.csv)
+records the corrected point and exact assertion.
+
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests
 and an actual short collector/summary on a hosted Windows Server2025 runner.

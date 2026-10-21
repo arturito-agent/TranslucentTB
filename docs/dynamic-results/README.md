@@ -84,3 +84,17 @@ right/static diagnostic. Exact physical geometry, healthy sampler progression,
 zero scheduler stops/creation failures, matching scoped GPU batches and all
 graceful target exits pass. Its short warmup and SMOKE labels exclude it from
 resource budget claims.
+
+`states-right-gdi-753a-startup-overlap.csv` retains a failed state-test assertion
+during Explorer's delayed startup reconstruction. The last actual background
+is the configured fallback while lifetime RGB still refers to pre-reset state.
+`states-right-gdi-753a-settled.csv` passes the unchanged assertions after shell
+startup settles. These do not establish complete reconstruction recovery or
+the full current state matrix; see the validation notes.
+
+`states-right-gdi-753a-start-button-probe.csv` retains the original failing Start
+pixel assertion. `start-pixel-gdi-753a.json` shows that its leading-edge probe
+hits the pressed Start button, while the fixed middle background point shows
+the exact expected RGB. The updated state harness records probe coordinates
+and window class and keeps the same exact color criterion. This diagnostic
+does not by itself establish the full positive state matrix.

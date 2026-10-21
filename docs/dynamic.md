@@ -204,7 +204,11 @@ requested view on cleanup. It records sampler progress, foreground window class
 and the real taskbar pixel. Run these cases only in the unlocked interactive
 session outside measured resource intervals. `-CompileOnly` checks the native
 helper/INPUT layout without sending input; it does not establish live shell
-integration. The first local VM execution of these new cases is still pending.
+integration. State pixel checks use a fixed background point in the bounded,
+few-window fixture and record its coordinates/window class. The leading edge
+contains the highlighted Start button when its menu is open and is unsuitable
+for an exact background-color assertion. See the validation notes for the
+current partial live results and the original probe diagnostic.
 
 The collector includes a final endpoint, checks an optional target PID, keeps
 the observer's costs separate, and leaves unavailable metrics empty with an

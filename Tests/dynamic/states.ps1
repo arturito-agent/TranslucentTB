@@ -13,12 +13,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 public static class DynamicStateTest {
     [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left,Top,Right,Bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct Point { public int X,Y; }
+    public sealed class Probe {public int X,Y;public uint Rgb;public string WindowClass;}
     [StructLayout(LayoutKind.Sequential)] struct MonitorInfo {public uint Size;public Rect Monitor,Work;public uint Flags;}
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr FindWindow(string c,string n);
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string n);
     [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr w,uint m,UIntPtr p,IntPtr l,uint f,uint t,out UIntPtr r);
     [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr w);
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(Point point);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr w,out uint pid);
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr w,StringBuilder name,int count);
     [StructLayout(LayoutKind.Sequential)] struct Keyboard { public ushort Key,Scan;public uint Flags,Time;public UIntPtr Extra; }
@@ -33,12 +36,15 @@ public static class DynamicStateTest {
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr w);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr w,IntPtr dc);
     [DllImport("gdi32.dll")] static extern uint GetPixel(IntPtr dc,int x,int y);
-    public static uint TaskbarPixel() {
+    public static Probe TaskbarProbe() {
         Rect r;
         if(!GetWindowRect(FindWindow("Shell_TrayWnd",null),out r)) throw new InvalidOperationException("No real taskbar");
         bool vertical=r.Bottom-r.Top>r.Right-r.Left;
-        int x=vertical?(r.Left+r.Right)/2:r.Left+10,y=vertical?r.Top+10:(r.Top+r.Bottom)/2;
-        return PixelAt(x,y);
+        // The leading edge contains the pressed Start button when Start is open.
+        // Use empty background in this bounded, few-window synthetic scene.
+        int x=vertical?(r.Left+r.Right)/2:r.Left+3*(r.Right-r.Left)/4,y=(r.Top+r.Bottom)/2;
+        var name=new StringBuilder(256);GetClassName(WindowFromPoint(new Point{X=x,Y=y}),name,name.Capacity);
+        return new Probe{X=x,Y=y,Rgb=PixelAt(x,y),WindowClass=name.ToString()};
     }
     public static uint ReferencePixel() {
         IntPtr bar=FindWindow("Shell_TrayWnd",null);Rect r;
@@ -146,7 +152,8 @@ $timer.Add_Tick({
         if($clock.Elapsed.TotalSeconds -lt 4){return}
         $dynamic=$stages[$script:stage]
         $samples=[DynamicStateTest]::Read(0);$active=[DynamicStateTest]::Read(5);$rgb=[DynamicStateTest]::Read(3)
-        $pixel=[DynamicStateTest]::TaskbarPixel()
+        $probe=[DynamicStateTest]::TaskbarProbe()
+        $pixel=$probe.Rgb
         $changes=[DynamicStateTest]::Read(1)
         $expectedRgb=if($changes -gt 0){$rgb}else{0x203040}
         $isMaximized=[DynamicStateTest]::IsZoomed($form.Handle)
@@ -155,7 +162,7 @@ $timer.Add_Tick({
         # legitimately uses the known fallback until the first confirmed color.
         $passed=if($dynamic){$active -eq 1 -and $samples -gt $script:baseline -and $pixel -eq $expectedRgb}else{$active -eq 0 -and $samples -eq $script:baseline}
         if($Case -eq 'MaximizedClear'){$passed=$passed -and ($isMaximized -eq (-not $dynamic))}
-        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;maximized=$isMaximized;title=$form.Text;foreground_class=[DynamicStateTest]::ForegroundClass();foreground_pid=[DynamicStateTest]::ForegroundPid();expected_worker_pid=$ExpectedProcessId;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
+        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;taskbar_probe_x=$probe.X;taskbar_probe_y=$probe.Y;taskbar_probe_class=$probe.WindowClass;maximized=$isMaximized;title=$form.Text;foreground_class=[DynamicStateTest]::ForegroundClass();foreground_pid=[DynamicStateTest]::ForegroundPid();expected_worker_pid=$ExpectedProcessId;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
         $script:rows | Export-Csv -LiteralPath $Output -Encoding UTF8 -NoTypeInformation
         $script:stage++;$script:started=$false
         if($script:stage -ge $stages.Count){$form.Close()}

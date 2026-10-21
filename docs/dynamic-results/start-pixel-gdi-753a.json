@@ -1,0 +1,65 @@
+{
+  "expected_pid": 5456,
+  "timer": 1,
+  "paused": 0,
+  "changes": 0,
+  "last_rgb": 0,
+  "fallback_rgb": 2109504,
+  "foreground_class": "Windows.UI.Core.CoreWindow",
+  "points": [
+    {
+      "x": 1249,
+      "y": 10,
+      "rgb": 5069158,
+      "window_class": "Start"
+    },
+    {
+      "x": 1249,
+      "y": 100,
+      "rgb": 2109504,
+      "window_class": "TrayButton"
+    },
+    {
+      "x": 1249,
+      "y": 200,
+      "rgb": 2109504,
+      "window_class": "MSTaskListWClass"
+    },
+    {
+      "x": 1249,
+      "y": 300,
+      "rgb": 2109504,
+      "window_class": "MSTaskListWClass"
+    },
+    {
+      "x": 1249,
+      "y": 400,
+      "rgb": 2109504,
+      "window_class": "MSTaskListWClass"
+    },
+    {
+      "x": 1249,
+      "y": 500,
+      "rgb": 2109504,
+      "window_class": "MSTaskListWClass"
+    },
+    {
+      "x": 1249,
+      "y": 600,
+      "rgb": 2109504,
+      "window_class": "MSTaskListWClass"
+    },
+    {
+      "x": 1249,
+      "y": 700,
+      "rgb": 2109504,
+      "window_class": "TrayNotifyWnd"
+    },
+    {
+      "x": 1249,
+      "y": 790,
+      "rgb": 2109504,
+      "window_class": "TrayButton"
+    }
+  ]
+}

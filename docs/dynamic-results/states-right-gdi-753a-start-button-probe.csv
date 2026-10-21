@@ -1,0 +1,6 @@
+"case","stage","expected_dynamic","timer","samples_start","samples_end","confirmed_rgb","confirmed_changes","expected_taskbar_rgb","taskbar_pixel_rgb","maximized","title","foreground_class","foreground_pid","expected_worker_pid","passed","qpc_ticks","qpc_frequency"
+"Start","0","True","1","4","8","0","0","2109504","5069158","False","Dynamic shell-state fixture","Windows.UI.Core.CoreWindow","4608","892","False","247897356164","10000000"
+"Start","1","False","0","9","9","0","0","2109504","2109504","False","Dynamic shell-state fixture","WindowsForms10.Window.8.app.0.2f81981_r13_ad1","1340","892","True","247939091291","10000000"
+"Start","2","True","1","13","17","0","0","2109504","5069158","False","Dynamic shell-state fixture","Windows.UI.Core.CoreWindow","4608","892","False","247980818422","10000000"
+"Start","3","False","0","18","18","0","0","2109504","2109504","False","Dynamic shell-state fixture","WindowsForms10.Window.8.app.0.2f81981_r13_ad1","1340","892","True","248022682403","10000000"
+"Start","4","True","1","22","26","0","0","2109504","5069158","False","Dynamic shell-state fixture","Windows.UI.Core.CoreWindow","4608","892","False","248064579321","10000000"
