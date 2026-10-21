@@ -62,6 +62,7 @@ private:
 		Dynamic::Stability DynamicState;
 		bool DynamicV2Active = false;
 		std::optional<std::uint32_t> DynamicTarget;
+		std::optional<bool> DynamicLine, DynamicPeek;
 		Dynamic::Transition DynamicFade;
 		std::unique_ptr<Dynamic::Capture> DynamicCapture;
 	};
@@ -159,7 +160,7 @@ private:
 		void UpdateDynamicContentHooks(bool active);
 		void UpdateDynamicAnimationTimer();
 		void StepDynamicAnimations();
-		bool ApplyDynamicClassicColor(MonitorInfo &info, Dynamic::Rgb color);
+		bool ApplyDynamicClassicColor(HWND window, Dynamic::Rgb color);
 	void ArmDynamicV2Timer();
 	void CancelDynamicV2();
 	void CALLBACK OnDynamicContentEvent(DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD thread, DWORD time);
@@ -176,6 +177,7 @@ private:
 	wil::unique_hwineventhook m_TitleChangeHook;
 	wil::unique_hwineventhook m_ParentChangeHook;
 	wil::unique_hwineventhook m_OrderChangeHook;
+	WINEVENTPROC m_DynamicContentThunk = nullptr;
 	wil::unique_hwineventhook m_DynamicScrollEndHook;
 	wil::unique_hwineventhook m_DynamicScrollHook;
 	wil::unique_hwineventhook m_DynamicSelectionHook;

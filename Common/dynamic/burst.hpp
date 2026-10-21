@@ -14,7 +14,7 @@ struct Burst {
 		if (!important && remaining) return false;
 		due = important ? now + 200 : std::max(now + 200, nextContent);
 		remaining = 3;
-		nextContent = due + 1800;
+		nextContent = due + 2000;
 		return true;
 	}
 	void Cancel() noexcept { remaining = 0; due = 0; nextContent = 0; }

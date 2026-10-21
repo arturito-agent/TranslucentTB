@@ -333,7 +333,7 @@ LRESULT TaskbarAttributeWorker::OnRequestAttributeRefresh(LPARAM lParam)
 			if (const auto config = GetConfig(iter); config.Accent != AppearanceAccent::Normal)
 			{
 				if (IsDynamicAccent(config.Accent) && iter->second.DynamicTarget)
-					ApplyDynamicClassicColor(iter->second, iter->second.DynamicFade.current);
+					ApplyDynamicClassicColor(iter->second.Taskbar.TaskbarWindow.handle(), iter->second.DynamicFade.current);
 				else SetAttribute(iter, config);
 				return 1;
 			}
@@ -720,7 +720,12 @@ void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppea
 				return;
 			}
 			info.DynamicFade.Snap(rgb);
-			if (ApplyDynamicClassicColor(info, rgb)) info.DynamicTarget = target;
+			info.DynamicTarget = target;
+			const auto monitor = taskbar->first;
+			const auto window = info.Taskbar.TaskbarWindow.handle();
+			if (!ApplyDynamicClassicColor(window, rgb))
+				if (const auto current = m_Taskbars.find(monitor); current != m_Taskbars.end() && current->second.Taskbar.TaskbarWindow.handle() == window)
+					current->second.DynamicTarget.reset();
 			return;
 		}
 		info.DynamicTarget = target;
@@ -755,8 +760,12 @@ void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppea
 				color.A = 0xFF;
 			}
 
-			const auto result = m_TaskbarService->SetTaskbarAppearance(taskbar->second.Taskbar.TaskbarWindow, brush, color.ToABGR());
-			if (dynamic && FAILED(result)) info.DynamicTarget.reset();
+			const auto monitor = taskbar->first;
+			const auto window = taskbar->second.Taskbar.TaskbarWindow.handle();
+			const auto result = m_TaskbarService->SetTaskbarAppearance(window, brush, color.ToABGR());
+			if (dynamic && FAILED(result))
+				if (const auto current = m_Taskbars.find(monitor); current != m_Taskbars.end() && current->second.Taskbar.TaskbarWindow.handle() == window)
+					current->second.DynamicTarget.reset();
 			HresultVerify(result, spdlog::level::info, L"Failed to set taskbar brush");
 		}
 	}
@@ -816,17 +825,26 @@ void TaskbarAttributeWorker::RefreshAttribute(taskbar_iterator taskbar)
 
 	if (m_TaskbarService)
 	{
-		HresultVerify(m_TaskbarService->SetTaskbarBorderVisibility(taskbarInfo.TaskbarWindow, cfg.ShowLine), spdlog::level::info, L"Failed to set taskbar border visibility");
+		if (taskbar->second.DynamicLine != cfg.ShowLine)
+		{
+			taskbar->second.DynamicLine = cfg.ShowLine;
+			HresultVerify(m_TaskbarService->SetTaskbarBorderVisibility(taskbarInfo.TaskbarWindow, cfg.ShowLine), spdlog::level::info, L"Failed to set taskbar border visibility");
+		}
 	}
 	else if (taskbarInfo.InnerXamlContent || taskbarInfo.WorkerWWindow)
 	{
-		ShowTaskbarLine(taskbarInfo, cfg.ShowLine);
+		if (taskbar->second.DynamicLine != cfg.ShowLine)
+		{
+			taskbar->second.DynamicLine = cfg.ShowLine;
+			ShowTaskbarLine(taskbarInfo, cfg.ShowLine);
+		}
 	}
 	else if (taskbarInfo.PeekWindow)
 	{
 		// Ignore changes when peek is active
-		if (!m_PeekActive)
+		if (!m_PeekActive && taskbar->second.DynamicPeek != cfg.ShowPeek)
 		{
+			taskbar->second.DynamicPeek = cfg.ShowPeek;
 			ShowAeroPeekButton(taskbarInfo, cfg.ShowPeek);
 		}
 	}
@@ -873,7 +891,7 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 		if ((m_DynamicLocked || m_DynamicDisplayOff) && it->second.DynamicFade.active)
 		{
 			it->second.DynamicFade.Snap(it->second.DynamicFade.to);
-			ApplyDynamicClassicColor(it->second,it->second.DynamicFade.current);
+			ApplyDynamicClassicColor(it->second.Taskbar.TaskbarWindow.handle(),it->second.DynamicFade.current);
 		}
 		if (!active) it->second.DynamicFade.active = false;
 		if (!active)
@@ -1013,6 +1031,7 @@ void TaskbarAttributeWorker::RequestDynamicV2Sample(bool important)
 	});
 	if (!active) return;
 	if (!m_DynamicV2Burst.Request(GetTickCount64(), important)) return;
+	if (important && m_DynamicV2Timer) { KillTimer(m_WindowHandle,DYNAMIC_V2_TIMER); m_DynamicV2Timer = false; }
 	++m_DynamicV2Triggers;
 	ArmDynamicV2Timer();
 }
@@ -1024,9 +1043,10 @@ void TaskbarAttributeWorker::UpdateDynamicContentHooks(bool active)
 		m_DynamicScrollEndHook.reset(); m_DynamicScrollHook.reset(); m_DynamicSelectionHook.reset();
 		return;
 	}
-	if (!m_DynamicScrollEndHook) m_DynamicScrollEndHook = CreateHook(EVENT_SYSTEM_SCROLLINGEND, CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent));
-	if (!m_DynamicScrollHook) m_DynamicScrollHook = CreateHook(EVENT_OBJECT_CONTENTSCROLLED, CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent));
-	if (!m_DynamicSelectionHook) m_DynamicSelectionHook = CreateHook(EVENT_OBJECT_SELECTION, CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent));
+	if (!m_DynamicContentThunk) m_DynamicContentThunk = CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent);
+	if (!m_DynamicScrollEndHook) m_DynamicScrollEndHook = CreateHook(EVENT_SYSTEM_SCROLLINGEND, m_DynamicContentThunk);
+	if (!m_DynamicScrollHook) m_DynamicScrollHook = CreateHook(EVENT_OBJECT_CONTENTSCROLLED, m_DynamicContentThunk);
+	if (!m_DynamicSelectionHook) m_DynamicSelectionHook = CreateHook(EVENT_OBJECT_SELECTION, m_DynamicContentThunk);
 }
 
 void TaskbarAttributeWorker::OnDynamicContentEvent(DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD, DWORD)
@@ -1061,11 +1081,11 @@ void TaskbarAttributeWorker::OnDynamicContentEvent(DWORD event, HWND hwnd, LONG 
 	RequestDynamicV2Sample();
 }
 
-bool TaskbarAttributeWorker::ApplyDynamicClassicColor(MonitorInfo &info, Dynamic::Rgb color)
+bool TaskbarAttributeWorker::ApplyDynamicClassicColor(HWND window, Dynamic::Rgb color)
 {
 	ACCENT_POLICY policy{static_cast<ACCENT_STATE>(AppearanceAccent::Opaque),2,Util::Color(color.r,color.g,color.b,255).ToABGR(),0};
 	const WINDOWCOMPOSITIONATTRIBDATA data{WCA_ACCENT_POLICY,&policy,sizeof(policy)};
-	if (!SetWindowCompositionAttribute(info.Taskbar.TaskbarWindow,&data)) { ++m_DynamicFailures; return false; }
+	if (!SetWindowCompositionAttribute(window,&data)) { ++m_DynamicFailures; return false; }
 	++m_DynamicAnimationFrames;
 	return true;
 }
@@ -1080,7 +1100,7 @@ void TaskbarAttributeWorker::UpdateDynamicAnimationTimer()
 		m_DynamicAnimationTimer = SetCoalescableTimer(m_WindowHandle,DYNAMIC_ANIMATION_TIMER,33,nullptr,8) != 0;
 		if (!m_DynamicAnimationTimer)
 		{
-			for (auto &[monitor,info] : m_Taskbars) if (info.DynamicFade.active) { info.DynamicFade.Snap(info.DynamicFade.to); ApplyDynamicClassicColor(info,info.DynamicFade.current); }
+			for (auto &[monitor,info] : m_Taskbars) if (info.DynamicFade.active) { info.DynamicFade.Snap(info.DynamicFade.to); ApplyDynamicClassicColor(info.Taskbar.TaskbarWindow.handle(),info.DynamicFade.current); }
 		}
 	}
 }
@@ -1088,12 +1108,15 @@ void TaskbarAttributeWorker::UpdateDynamicAnimationTimer()
 void TaskbarAttributeWorker::StepDynamicAnimations()
 {
 	const auto now = GetTickCount64();
+	std::vector<std::pair<HWND,Dynamic::Rgb>> frames;
 	for (auto &[monitor,info] : m_Taskbars) if (info.DynamicFade.active)
 	{
 		const auto previous = info.DynamicFade.current;
 		const auto next = info.DynamicFade.Step(now);
-		if (next != previous) ApplyDynamicClassicColor(info,next);
+		if (next != previous) frames.emplace_back(info.Taskbar.TaskbarWindow.handle(),next);
 	}
+	// Composition may reenter ResetState; never keep map references across it.
+	for (const auto &[window,color] : frames) ApplyDynamicClassicColor(window,color);
 	UpdateDynamicAnimationTimer();
 }
 

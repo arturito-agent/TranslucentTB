@@ -128,7 +128,7 @@ int main()
 		Check(burst.remaining == 2 && burst.due == 1500, "second read confirms color");
 		burst.Consumed(1500); burst.Consumed(2000);
 		Check(burst.remaining == 0 && burst.due == 0, "burst ends without periodic work");
-		Check(burst.Request(2001) && burst.due == 3000, "content event during cooldown is delayed rather than lost");
+		Check(burst.Request(2001) && burst.due == 3200, "content event during cooldown is delayed rather than lost");
 		Check(burst.Request(2100, true), "real window switch overrides cooldown");
 		burst.Consumed(2300);
 		Check(!burst.Request(2350) && burst.remaining == 2, "noise cannot replenish consumed reads");
