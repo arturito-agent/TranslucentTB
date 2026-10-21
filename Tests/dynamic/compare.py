@@ -7,6 +7,7 @@ from pathlib import Path
 from statistics import median
 
 from summarize import dwm_cpu, read, summarize
+from summarize_gpu import summarize_gpu
 
 
 LABEL = re.compile(r"^(Bottom|Left|Right)-(Static|Interaction|Changing)-r([1-3])-p([0-4])-(baseline|gdi|dxgi)$")
@@ -60,6 +61,7 @@ def compare(directory, auxiliary):
         raise ValueError("Suite has an error receipt; investigate before comparing")
     phases = {}
     receipts = {}
+    gpu = {}
     setting = None
     for path in sorted(directory.glob("*.csv")):
         key, roles = load_phase(path, auxiliary)
@@ -78,8 +80,12 @@ def compare(directory, auxiliary):
             raise ValueError("Receipt label/commit does not match measurement")
         phases[phase_key] = (key[-1], roles)
         receipts[phase_key] = receipt
+        if receipt.get("gpu_enabled"):
+            gpu[phase_key] = summarize_gpu(path)
     if len(phases) != 15:
         raise ValueError("Expected all fifteen full phases")
+    if gpu and len(gpu) != len(phases):
+        raise ValueError("GPU collection must be consistent throughout a suite")
     comparisons = []
     for repeat in range(1, 4):
         expected = ("baseline", "gdi", "baseline", "dxgi", "baseline") if repeat % 2 else ("baseline", "dxgi", "baseline", "gdi", "baseline")
@@ -126,7 +132,8 @@ def compare(directory, auxiliary):
             "aggregates": aggregates, "comparisons": comparisons,
             "phase_summaries": [{"repeat": key[0], "phase": key[1], "backend": backend,
                                  "receipt": receipts[key], "absolute_roles": roles}
-                                for key, (backend, roles) in sorted(phases.items())]}
+                                for key, (backend, roles) in sorted(phases.items())],
+            "gpu_phase_summaries": [gpu[key] for key in sorted(gpu)]}
 
 
 def main():

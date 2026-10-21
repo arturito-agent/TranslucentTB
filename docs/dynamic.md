@@ -176,6 +176,15 @@ Keep engine instances separate. Per-process graphics-memory values include
 cross-process sharing and must not be summed as a unique physical footprint or
 added to private commit; see Microsoft's
 [GPU memory accounting explanation](https://devblogs.microsoft.com/directx/gpus-in-the-task-manager/).
+`python Tests/dynamic/summarize_gpu.py <phase.csv>` validates each GPU record
+against its CPU batch, process scope, commit and QPC interval. It reports valid,
+absent and invalid observations separately for each engine/adapter instance,
+including roles with no reported counter instances. It preserves provider
+errors and summarizes collector read time. Medians use valid observations only;
+check their coverage before interpreting them. `compare.py` includes these
+absolute GPU summaries for every phase when GPU collection was enabled, and
+rejects mixed instrumentation. It does not sum GPU engines or process memory.
+
 These are the guest's counters, not physical-GPU power measurements. The aborted
 first series used its original CPU/RAM collector throughout; no GPU results are
 retroactively attributed to it.
