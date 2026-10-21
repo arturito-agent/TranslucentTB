@@ -119,12 +119,13 @@ try {
    if(-not(Test-Path $edge)){throw 'Owned offline Edge check requires installed Edge'}
    $profile=Join-Path $OutputDirectory ('browser-profile-'+$version)
    $page='file:///'+(Join-Path $PSScriptRoot 'browser-events.html').Replace('\','/')
-   Start-Process $edge -ArgumentList @('--no-first-run','--no-default-browser-check','--disable-background-networking','--start-maximized',('--user-data-dir="'+$profile+'"'),('--app='+$page))|Out-Null
-   $wait=[Diagnostics.Stopwatch]::StartNew()
-   do{Pump 0.1;$browserWindow=[ExactProbe]::Browser();if($wait.Elapsed.TotalSeconds -gt 12){throw 'Owned browser app window not found'}}while($browserWindow -eq [IntPtr]::Zero)
-   $browserOwner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId($browserWindow,[ref]$browserOwner)
+   Start-Process $edge -ArgumentList @('--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-background-mode','--start-maximized',('--user-data-dir="'+$profile+'"'),('--app='+$page))|Out-Null
+   $wait=[Diagnostics.Stopwatch]::StartNew();$browserCandidate=[IntPtr]::Zero
+   do{Pump 0.1;$browserCandidate=[ExactProbe]::Browser();if($wait.Elapsed.TotalSeconds -gt 12){throw 'Owned browser app window not found'}}while($browserCandidate -eq [IntPtr]::Zero)
+   $browserOwner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId($browserCandidate,[ref]$browserOwner)
    $commandLine=(Get-CimInstance Win32_Process -Filter ("ProcessId="+$browserOwner)).CommandLine
    if(-not $commandLine.Contains($profile)){throw 'Refusing an unrelated browser window'}
+   $browserWindow=$browserCandidate
    [void][ExactProbe]::ShowWindow($browserWindow,3);[void][ExactProbe]::SetForegroundWindow($browserWindow)
    Pump 5;$null=Snapshot 'browser-idle';Assert-Color 0xF9F6F3
    Pump 7;$null=Snapshot 'browser-title-event';Assert-Color 0x436E99
