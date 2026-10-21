@@ -83,7 +83,9 @@ $timer.Add_Tick({
                 $a.Invalidate()
             }
             $script:pending=$true
-            $script:nextEvent=$script:eventTick+3*[Diagnostics.Stopwatch]::Frequency
+            # Vary the phase relative to the 500ms capture timer reproducibly.
+            $pauseMs = 3000+(($script:trial*137)%499)
+            $script:nextEvent=$script:eventTick+[long]($pauseMs*[Diagnostics.Stopwatch]::Frequency/1000)
         }
     } catch { $script:failure=$_.ToString();$a.Close() }
 })

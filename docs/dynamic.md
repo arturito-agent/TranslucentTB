@@ -32,9 +32,11 @@ Fixed buckets prevent drift across a gradient.
 
 Require at least eight steps and 1% of the edge. Require the candidate bucket
 on two observations at least 200 ms apart; same-bucket fluctuations retain
-the prior output. The initial scheduler samples every 500 ms with timer
-coalescing. Existing window events group appearance refreshes; they do not
-perform pixel captures. Sampling only applies changed colors. Explorer
+the prior output. The steady scheduler samples every 500 ms with timer
+coalescing. Foreground changes and activation of Dynamic request one additional
+deferred sample after 200 ms, coalescing event bursts. All paths share a 200 ms
+minimum between attempts. Window events never capture pixels synchronously.
+Sampling only applies changed colors. Explorer
 invalidations may reapply cached colors. Sampling stops when no effective
 appearance is Dynamic, the session locks, or the display turns off.
 
@@ -115,6 +117,12 @@ transport; this never launches or controls a desktop application. Both streams
 include the machine's monotonic QPC ticks/frequency for alignment. Guest wall
 clock configuration must be recorded separately. The CSV streams each observation
 batch so a failed long run retains diagnostic data. An existing output is rejected.
+The collector includes ExplorerPatcher's optional DWM helper when present.
+Benchmarks also record fixture and harness processes separately as test overhead.
+`summarize.py` reports per-process absolute metrics and rates, preserves missing
+values and refuses short/SMOKE data as benchmarks. Its optional DWM stream
+interpolates cumulative CPU at common QPC endpoints only when the observer
+brackets them with gaps of at most six seconds.
 
 The worker accepts the registered read-only message `TTB_QueryDynamicStats`.
 Its wParam selects samples attempted (0), confirmed color changes (1), actual

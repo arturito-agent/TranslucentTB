@@ -97,6 +97,7 @@ private:
 	ConfigManager &m_ConfigManager;
 	Dynamic::Capture m_DynamicCapture;
 	bool m_DynamicTimer = false;
+	bool m_DynamicFocusTimer = false;
 	bool m_DynamicLocked = false;
 	bool m_DynamicDisplayOff = false;
 	bool m_DynamicSampling = false;
@@ -108,7 +109,9 @@ private:
 	std::uint32_t m_DynamicLastRgb = 0;
 	wil::unique_hpowernotify m_DynamicDisplayHook;
 	static constexpr UINT_PTR DYNAMIC_TIMER = 0x44594E;
+	static constexpr UINT_PTR DYNAMIC_FOCUS_TIMER = 0x44594F;
 	void UpdateDynamicTimer();
+	void RequestDynamicFocusSample();
 	void SampleDynamic();
 
 	// Hooks

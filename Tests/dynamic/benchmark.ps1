@@ -106,7 +106,7 @@ try {
             $receipt = [ordered]@{label=$label;diagnostic_only=[bool]$Smoke;commit=$build.commit;executable_sha256=$build.sha256;pid=$target.Id;start_qpc=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency;warmup_seconds=$WarmupSeconds;duration_seconds=$DurationSeconds}
             $receipt | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'current-phase.json')
             $csv = Join-Path $OutputDirectory "$label.csv"
-            $metricCode = "& $(Quote-PS (Join-Path $PSScriptRoot 'measure.ps1')) -Output $(Quote-PS $csv) -Label '$label' -Commit '$($build.commit)' -TargetProcessId $($target.Id) -WarmupSeconds $WarmupSeconds -DurationSeconds $DurationSeconds"
+            $metricCode = "& $(Quote-PS (Join-Path $PSScriptRoot 'measure.ps1')) -Output $(Quote-PS $csv) -Label '$label' -Commit '$($build.commit)' -TargetProcessId $($target.Id) -WorkloadProcessId $($fixture.Id) -HarnessProcessId $PID -WarmupSeconds $WarmupSeconds -DurationSeconds $DurationSeconds"
             $collector = Start-Script $metricCode
             if (-not $collector.WaitForExit(($WarmupSeconds+$DurationSeconds+30)*1000) -or $collector.ExitCode -ne 0) { throw "Collector failed: $label" }
             if (-not [DynamicBenchmark]::FixtureExists($fixture.Id)) { throw 'Fixture vanished during measurement' }

@@ -46,6 +46,21 @@ separated red runs totaling 480. Static noise did not increase the confirmed
 change/application count. A generic per-window DarkMode_Explorer theme probe did
 not correct classic glyphs and is not part of the product implementation.
 
+Both a6ad586 backends also pass all six color cases on a real right taskbar
+(62x800 pixels, rectangle x=1218..1280); the winning blue run is 320 steps.
+The GDI display-off test on that taskbar observes a stopped timer, paused flag,
+and unchanged attempt count (415 to 415) over three seconds. A physical console
+screenshot is black. After a console key wakes the display, the timer resumes,
+the pause flag clears and the attempt count advances to 425. Session lock and
+other recovery cases remain untested.
+
+Preliminary a6ad586 latency observations: 30 left DXGI focus trials have p95
+1.067s; 30 right GDI focus trials with deterministic interval variation have p95
+1.051s. Both slightly exceed the initial 1s focus target; the 50ms observer
+quantization is included. A coalesced foreground-triggered deferred sample is
+now implemented for validation, retaining the 500ms steady timer and shared
+200ms minimum. Its effect and interaction CPU cost are not yet measured.
+
 DXGI initially timed out while the virtual display was powered off. With the
 display actually awake, its first probe frame was black, subsequent frames
 matched GDI, and all six live left-taskbar color cases passed. Treat display

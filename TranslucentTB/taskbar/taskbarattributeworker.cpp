@@ -145,6 +145,9 @@ void TaskbarAttributeWorker::OnForegroundWindowChange(DWORD, HWND hwnd, LONG idO
 			MessagePrint(spdlog::level::debug, std::format(L"Changed foreground window to {}", DumpWindow(m_ForegroundWindow)));
 		}
 
+		// Runs after the refresher resolves the newly effective appearance.
+		const bool foregroundChanged = oldForegroundWindow.handle() != m_ForegroundWindow.handle();
+		auto dynamicFocus = wil::scope_exit([this, foregroundChanged] { if (foregroundChanged) RequestDynamicFocusSample(); });
 		AttributeRefresher refresher(*this);
 		HMONITOR oldMonitor = nullptr;
 		if (oldForegroundWindow)
@@ -349,6 +352,13 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	if (uMsg == WM_TIMER && wParam == DYNAMIC_TIMER)
 	{
+		SampleDynamic();
+		return 0;
+	}
+	if (uMsg == WM_TIMER && wParam == DYNAMIC_FOCUS_TIMER)
+	{
+		KillTimer(m_WindowHandle, DYNAMIC_FOCUS_TIMER);
+		m_DynamicFocusTimer = false;
 		SampleDynamic();
 		return 0;
 	}
@@ -734,6 +744,7 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 	if (needed && !m_DynamicTimer)
 	{
 		m_DynamicTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_TIMER, 500, nullptr, 50) != 0;
+		RequestDynamicFocusSample();
 	}
 	else if (!needed && m_DynamicTimer)
 	{
@@ -741,6 +752,21 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 		m_DynamicTimer = false;
 		m_DynamicCapture.Reset();
 		for (auto &[monitor, info] : m_Taskbars) info.DynamicState.pending.reset();
+	}
+	if (!needed && m_DynamicFocusTimer)
+	{
+		KillTimer(m_WindowHandle, DYNAMIC_FOCUS_TIMER);
+		m_DynamicFocusTimer = false;
+	}
+}
+
+void TaskbarAttributeWorker::RequestDynamicFocusSample()
+{
+	// Coalesce foreground bursts without changing the steady-state 2Hz timer.
+	// SampleDynamic also enforces the shared 200ms minimum between attempts.
+	if (m_DynamicTimer && !m_DynamicFocusTimer && !m_DynamicLocked && !m_DynamicDisplayOff)
+	{
+		m_DynamicFocusTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_FOCUS_TIMER, 200, nullptr, 50) != 0;
 	}
 }
 

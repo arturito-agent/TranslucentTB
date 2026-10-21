@@ -5,6 +5,8 @@ param(
     [int] $DurationSeconds = 305,
     [int] $IntervalSeconds = 5,
     [int] $TargetProcessId = 0,
+    [int] $WorkloadProcessId = 0,
+    [int] $HarnessProcessId = 0,
     [string] $Commit = '',
     [switch] $SystemOnly
 )
@@ -72,9 +74,12 @@ while ($true) {
     $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
     $supportsStats = $window -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($window,$message,255) -eq 0x44594E01
     $captureStats = $supportsStats -and ([DynamicMetrics]::Read($window,$message,254) -band 1) -ne 0
-    $processes = @(if ($SystemOnly) { Get-Process -Name dwm -ErrorAction SilentlyContinue }
-                  else { Get-Process -Name TranslucentTB,explorer,dwm -ErrorAction SilentlyContinue })
+    $processes = @(if ($SystemOnly) { Get-Process -Name dwm,ep_dwm_svc -ErrorAction SilentlyContinue }
+                  else { Get-Process -Name TranslucentTB,explorer,dwm,ep_dwm_svc -ErrorAction SilentlyContinue })
     if ($TargetProcessId -gt 0 -and -not ($processes | Where-Object Id -eq $TargetProcessId)) { throw "Target process $TargetProcessId exited during measurement" }
+    foreach ($additionalId in @($WorkloadProcessId,$HarnessProcessId)) {
+        if ($additionalId -gt 0) { $processes += Get-Process -Id $additionalId }
+    }
     $processes += Get-Process -Id $PID
     foreach ($process in $processes) {
         $readErrors = New-Object 'System.Collections.Generic.List[string]'
@@ -86,7 +91,7 @@ while ($true) {
             label=$Label; commit=$Commit; elapsed_seconds=$elapsed; timestamp_utc=[DateTime]::UtcNow.ToString('o')
             qpc_ticks=$qpc; qpc_frequency=[Diagnostics.Stopwatch]::Frequency
             process=$process.ProcessName; pid=$process.Id; logical_processors=$logical
-            role=$(if($process.Id -eq $PID){'observer'}elseif($process.ProcessName -eq 'TranslucentTB'){'target'}elseif($process.ProcessName -eq 'dwm'){'compositor'}else{'shell'})
+            role=$(if($process.Id -eq $PID){'observer'}elseif($process.Id -eq $WorkloadProcessId){'workload'}elseif($process.Id -eq $HarnessProcessId){'harness'}elseif($process.ProcessName -eq 'TranslucentTB'){'target'}elseif($process.ProcessName -eq 'dwm'){'compositor'}elseif($process.ProcessName -eq 'ep_dwm_svc'){'taskbar-helper'}else{'shell'})
             cpu_seconds=$native.CpuSeconds
             private_bytes=(Read-Metric { $process.PrivateMemorySize64 } 'private_bytes')
             working_set_bytes=(Read-Metric { $process.WorkingSet64 } 'working_set_bytes')
