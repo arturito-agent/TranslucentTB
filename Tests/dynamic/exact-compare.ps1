@@ -2,7 +2,8 @@ param(
  [Parameter(Mandatory=$true)][string]$ExecutablePath,
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
  [switch]$SidesOnly,
- [switch]$WithBrowser
+ [switch]$WithBrowser,
+ [ValidateSet('All','dynamic','dynamic_v2')][string]$OnlyMode='All'
 )
 $ErrorActionPreference='Stop'
 if((Test-Path $OutputDirectory) -or (Get-Process TranslucentTB -ErrorAction SilentlyContinue)){throw 'Fresh output and no existing target required'}
@@ -45,20 +46,28 @@ function Pump([double]$Seconds){$w=[Diagnostics.Stopwatch]::StartNew();while($w.
 function Save-Rows {$rows|ConvertTo-Json -Depth 6|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'observations.json')}
 function Snapshot([string]$Stage){
  $target.Refresh()
- $r=[pscustomobject]@{mode=$version;position=$position;stage=$Stage;frames=[ExactProbe]::Read(8);samples=[ExactProbe]::Read(0);changes=[ExactProbe]::Read(1);applications=[ExactProbe]::Read(2);rgb=[ExactProbe]::Read(3);periodic=[ExactProbe]::Read(5);burst=[ExactProbe]::Read(27);remaining=[ExactProbe]::Read(28);triggers=[ExactProbe]::Read(29);duplicate_colors=[ExactProbe]::Read(30);classic_writes=[ExactProbe]::Read(31);animation_timer=[ExactProbe]::Read(32);events=[ExactProbe]::Read(33);filtered=[ExactProbe]::Read(34);qpc=[Diagnostics.Stopwatch]::GetTimestamp();frequency=[Diagnostics.Stopwatch]::Frequency;cpu_seconds=$target.TotalProcessorTime.TotalSeconds;explorer_cpu_seconds=(Get-Process explorer|Measure-Object -Property CPU -Sum).Sum;private_bytes=$target.PrivateMemorySize64;working_set_bytes=$target.WorkingSet64;handles=$target.HandleCount}
+ $r=[pscustomobject]@{mode=$version;position=$position;stage=$Stage;frames=[ExactProbe]::Read(8);samples=[ExactProbe]::Read(0);changes=[ExactProbe]::Read(1);applications=[ExactProbe]::Read(2);rgb=[ExactProbe]::Read(3);periodic=[ExactProbe]::Read(5);burst=[ExactProbe]::Read(27);remaining=[ExactProbe]::Read(28);paused=[ExactProbe]::Read(6);flags=[ExactProbe]::Read(11);last_sample=[ExactProbe]::Read(7);run_length=[ExactProbe]::Read(4);failures=[ExactProbe]::Read(10);triggers=[ExactProbe]::Read(29);duplicate_colors=[ExactProbe]::Read(30);classic_writes=[ExactProbe]::Read(31);animation_timer=[ExactProbe]::Read(32);events=[ExactProbe]::Read(33);filtered=[ExactProbe]::Read(34);qpc=[Diagnostics.Stopwatch]::GetTimestamp();frequency=[Diagnostics.Stopwatch]::Frequency;cpu_seconds=$target.TotalProcessorTime.TotalSeconds;explorer_cpu_seconds=(Get-Process explorer|Measure-Object -Property CPU -Sum).Sum;private_bytes=$target.PrivateMemorySize64;working_set_bytes=$target.WorkingSet64;handles=$target.HandleCount}
  $rows.Add($r);Save-Rows;return $r
 }
 function Color([uint32]$Rgb){return [Drawing.Color]::FromArgb([int](($Rgb -shr 16)-band 255),[int](($Rgb -shr 8)-band 255),[int]($Rgb-band 255))}
 function Assert-Color([uint32]$Rgb){if([ExactProbe]::Read(3) -ne $Rgb -or [ExactProbe]::Pixel($script:pixelX,$script:pixelY) -ne $Rgb){throw ('Exact RGB mismatch: expected {0:X6}, state {1:X6}, physical {2:X6}' -f $Rgb,[ExactProbe]::Read(3),[ExactProbe]::Pixel($script:pixelX,$script:pixelY))}}
 try {
- $modes=if($SidesOnly){@('dynamic_v2')}else{@('dynamic','dynamic_v2')}
+ $modes=if($SidesOnly){@('dynamic_v2')}elseif($OnlyMode -ne 'All'){@($OnlyMode)}else{@('dynamic','dynamic_v2')}
  $positions=if($SidesOnly){@('Bottom','Left','Right')}else{@('Bottom')}
  foreach($version in $modes){
   @{desktop_appearance=@{accent='clear';color='#00000000'};visible_window_appearance=@{enabled=$false};maximized_window_appearance=@{enabled=$true;accent=$version;color='#203040FF'};start_opened_appearance=@{enabled=$false};search_opened_appearance=@{enabled=$false};task_view_opened_appearance=@{enabled=$false};battery_saver_appearance=@{enabled=$false}}|ConvertTo-Json -Depth 8|Set-Content -Encoding UTF8 $settings
   $target=Start-Process $ExecutablePath -WorkingDirectory (Split-Path $ExecutablePath) -PassThru
-  Pump 4
-  $owner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId([ExactProbe]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow'),[ref]$owner)
-  if($owner -ne $target.Id -or ([ExactProbe]::Read(254)-band 16)-eq 0){throw 'Expected owned exact/transition worker'}
+  $readyWatch=[Diagnostics.Stopwatch]::StartNew();$ready=$false
+  do {
+   $target.Refresh();if($target.HasExited){throw 'Target exited during initialization'}
+   try {
+    $owner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId([ExactProbe]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow'),[ref]$owner)
+    if($owner -eq $target.Id){$ready=([ExactProbe]::Read(254)-band 16)-ne 0}
+   } catch {$ready=$false}
+   if(-not $ready){Pump 0.2}
+   if($readyWatch.Elapsed.TotalSeconds -gt 30){throw 'Owned worker failed to initialize within 30 seconds'}
+  } while(-not $ready)
+  Pump 1
   foreach($position in $positions){
    if($SidesOnly){Set-ExperimentTaskbarPosition $position}
    $form=New-Object Windows.Forms.Form
@@ -68,6 +77,7 @@ try {
    if(-not [ExactProbe]::GetWindowRect([ExactProbe]::FindWindow('Shell_TrayWnd',$null),[ref]$bar)){throw 'No real taskbar'}
    $script:pixelX=if($position -eq 'Bottom'){[int]($bar.Left+($bar.Right-$bar.Left)/4)}else{[int](($bar.Left+$bar.Right)/2)}
    $script:pixelY=[int](($bar.Top+$bar.Bottom)/2)
+   $null=Snapshot 'initial-color'
    Assert-Color 0xF9F6F3
    $first=Snapshot 'idle-start';Pump $(if($SidesOnly){3}else{15});$last=Snapshot 'idle-end'
    if($version -eq 'dynamic_v2' -and ($first.frames -ne $last.frames -or $last.burst -or $last.animation_timer)){throw 'Unexpected idle capture/animation'}
@@ -130,9 +140,13 @@ try {
  'complete'|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'status.txt')
 } catch {$_|Out-String|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'error.txt');throw}
 finally {
+ try {
  if($browserWindow -ne [IntPtr]::Zero){[void][ExactProbe]::PostMessage($browserWindow,0x10,[IntPtr]::Zero,[IntPtr]::Zero)}
  if($form){$form.Close();$form.Dispose()}
  if($target -and -not $target.HasExited){& (Join-Path $PSScriptRoot 'session.ps1') -Action Exit -ExecutablePath $ExecutablePath -Output (Join-Path $OutputDirectory 'cleanup-exit.json')}
- if($null -ne $saved){[IO.File]::WriteAllBytes($settings,$saved)}elseif(Test-Path $settings){Remove-Item $settings}
- [DynamicFixture]::ReleaseDisplay()
+ } finally {
+  if($pixels.Count){$pixels|ConvertTo-Json -Depth 4|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'transition-pixels.json')}
+  if($null -ne $saved){[IO.File]::WriteAllBytes($settings,$saved)}elseif(Test-Path $settings){Remove-Item $settings}
+  [DynamicFixture]::ReleaseDisplay()
+ }
 }

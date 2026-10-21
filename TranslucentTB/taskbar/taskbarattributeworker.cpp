@@ -1043,7 +1043,6 @@ void TaskbarAttributeWorker::UpdateDynamicContentHooks(bool active)
 		m_DynamicScrollEndHook.reset(); m_DynamicScrollHook.reset(); m_DynamicSelectionHook.reset();
 		return;
 	}
-	if (!m_DynamicContentThunk) m_DynamicContentThunk = CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent);
 	if (!m_DynamicScrollEndHook) m_DynamicScrollEndHook = CreateHook(EVENT_SYSTEM_SCROLLINGEND, m_DynamicContentThunk);
 	if (!m_DynamicScrollHook) m_DynamicScrollHook = CreateHook(EVENT_OBJECT_CONTENTSCROLLED, m_DynamicContentThunk);
 	if (!m_DynamicSelectionHook) m_DynamicSelectionHook = CreateHook(EVENT_OBJECT_SELECTION, m_DynamicContentThunk);
@@ -1796,6 +1795,8 @@ TaskbarAttributeWorker::TaskbarAttributeWorker(ConfigManager &cfgManager, HINSTA
 	m_ResizeMoveHook = CreateHook(EVENT_OBJECT_LOCATIONCHANGE, stateThunk);
 	m_TitleChangeHook = CreateHook(EVENT_OBJECT_NAMECHANGE, stateThunk);
 	m_ParentChangeHook = CreateHook(EVENT_OBJECT_PARENTCHANGE, stateThunk);
+	// Allocate once while the thunk page is writable; only the hooks are lazy.
+	m_DynamicContentThunk = CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent);
 	m_ThunkPage.mark_executable();
 
 	m_PowerSaverHook.reset(RegisterPowerSettingNotification(m_WindowHandle, &GUID_POWER_SAVING_STATUS, DEVICE_NOTIFY_WINDOW_HANDLE));
