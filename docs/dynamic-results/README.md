@@ -123,4 +123,13 @@ percentiles or an API performance ranking.
 case: the real bar keeps the old blue pixel while its worker has no taskbars,
 timer=0, paused=0 and unchanged attempts/frames. It is failure evidence and
 does not establish the exact transient classification cause. DXGI was not run
-after this failure; the proposed bounded-discovery repair remains unvalidated.
+after this failure. `explorer-recovery-bottom-{gdi,dxgi}-e4f0.json` records the
+first nominal passing repeats on the new source, including settled discovery
+timers and verified exits. Their request counters are both zero: the actual
+delayed-retry path is not exercised and the rare failure's repair is unproven.
+
+`functional-matrix-e4f0.json` binds both executable hashes, actual bounds and
+four verified exits for the new left/bottom runs. The four
+`functional-{left,bottom}-{gdi,dxgi}-e4f0.csv` files each contain six exact color
+cases. This is functional/geometry evidence at 100%, not CPU/RAM, stability or
+glyph-contrast evidence.

@@ -120,7 +120,9 @@ try{
   $a=Snapshot;Start-Sleep -Seconds 2;$b=Snapshot
   $pixel=if($b.edge){[DynamicFunctional]::PixelRgb($(if($Position -eq 'Bottom'){[int]($b.left+3*($b.right-$b.left)/4)}else{[int](($b.left+$b.right)/2)}),[int](($b.top+$b.bottom)/2))}else{$null}
   $passed=$a.timer -eq 1 -and $b.timer -eq 1 -and $b.paused -eq 0 -and $b.attempts -gt $a.attempts -and $b.rgb -eq 2121888 -and $b.edge -eq $Position -and $b.frames -gt $before.frames -and $pixel -eq 2121888
-  [ordered]@{backend=$backend;position=$Position;commit=$build.commit;diagnostic_only=$true;before=$before;after_start=$a;after_end=$b;actual_taskbar_pixel_rgb=$pixel;passed=$passed;observations=$rows.Count}|ConvertTo-Json -Depth 4|Set-Content -Encoding UTF8 (Join-Path $folder "$backend-result.json")
+  $discoverySettled=if($null -ne $b.discovery_timer){$a.discovery_timer -eq 0 -and $b.discovery_timer -eq 0 -and $a.discovery_requests -eq $b.discovery_requests -and $b.discovery_failures -eq $before.discovery_failures}else{$null}
+  if($null -ne $discoverySettled){$passed=$passed -and $discoverySettled}
+  [ordered]@{backend=$backend;position=$Position;commit=$build.commit;diagnostic_only=$true;before=$before;after_start=$a;after_end=$b;actual_taskbar_pixel_rgb=$pixel;discovery_settled=$discoverySettled;passed=$passed;observations=$rows.Count}|ConvertTo-Json -Depth 4|Set-Content -Encoding UTF8 (Join-Path $folder "$backend-result.json")
   if(-not $passed){throw "Recovery failed: $backend"}
   Exit-Owned $backend;$target=$null
   [void][DynamicBenchmark]::CloseFixture($fixture.Id);if(-not $fixture.WaitForExit(10000)){throw 'Fixture did not close'};$fixture=$null

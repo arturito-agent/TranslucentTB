@@ -184,6 +184,10 @@ while ($true) {
             if($schedulerAvailable) {
                 $names=@('flags','taskbars','stop_entry_flags','stop_flags','stop_tick','stop_taskbars','stop_desktop','timer_error','desktop','stops','timer_failures')
                 for($index=0;$index -lt $names.Count;$index++){$context[$names[$index]]=[DynamicMetrics]::Read($window,$message,($index+11))}
+                if(($capabilities -band 4) -ne 0){
+                    $recoveryNames=@('discovery_requests','discovery_timer','discovery_attempts','discovery_error','discovery_failures')
+                    for($index=0;$index -lt $recoveryNames.Count;$index++){$context[$recoveryNames[$index]]=[DynamicMetrics]::Read($window,$message,($index+22))}
+                }
             }
             $context|ConvertTo-Json|Set-Content -Encoding UTF8 -LiteralPath ($Output+'.sampler-failure.json')
             throw 'Candidate sampler paused or stopped; retained the failing observation'

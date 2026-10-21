@@ -194,8 +194,24 @@ sequence. Discovery is canceled once the map is populated, all Dynamic options
 are disabled, the display/session pauses or the app exits. It adds no steady
 capture-rate increase or permanent watchdog. Scalar diagnostics distinguish
 actual recovery attempts from a coincidental subsequent shell event. This
-source change still requires both Windows builds and actual VM validation;
-no claim of repaired recovery or completed resource budgets follows yet.
+source revision e4f09c8 now passes both Windows builds, 83 native tests and
+2,021 portable checks per backend. The first bottom recovery repeat also
+passes with both verified binaries: exact blue, advancing attempts/new frames,
+active unpaused sampling, graceful exit and no queued discovery timer/failures.
+Both discovery request counters remain zero, so these successful nominal trials
+do not exercise the delayed-retry path or prove the rare empty-map repair.
+See [GDI](dynamic-results/explorer-recovery-bottom-gdi-e4f0.json) and
+[DXGI](dynamic-results/explorer-recovery-bottom-dxgi-e4f0.json). Full resource
+budgets and prolonged stability remain unverified.
+
+All 24 new e4f09c8 left/bottom color cases pass: six patterns per position and
+backend, comparing the independent expected RGB, confirmed worker RGB and an
+actual taskbar pixel. The real left (0,0)..(62,800) and bottom
+(0,760)..(1280,800) bounds remain consistent at 96 DPI. All four app exits are
+graceful, the driver finishes, and test settings are restored. The
+[matrix receipt](dynamic-results/functional-matrix-e4f0.json) pins both binary
+hashes; the corresponding CSVs retain every color/run-length observation.
+These verify exact colors and geometry, not resource budgets or glyph contrast.
 
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests

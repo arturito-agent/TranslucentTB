@@ -1,0 +1,76 @@
+{
+  "commit": "e4f09c8af0795a86dad562dfbea3c6225f9d9a2c",
+  "diagnostic_only": true,
+  "resource_budget_claim": false,
+  "results": [
+    {
+      "backend": "gdi",
+      "position": "Left",
+      "pid": 6292,
+      "sha256": "1c6e5bc37ea2c777df703580a9e8778a0b9fc4654ecb6935fb8b3530f2dc1e56",
+      "geometry": {
+        "Left": 0,
+        "Top": 0,
+        "Right": 62,
+        "Bottom": 800,
+        "Dpi": 96,
+        "Edge": "Left"
+      },
+      "cases": 6,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "gdi",
+      "position": "Bottom",
+      "pid": 6648,
+      "sha256": "1c6e5bc37ea2c777df703580a9e8778a0b9fc4654ecb6935fb8b3530f2dc1e56",
+      "geometry": {
+        "Left": 0,
+        "Top": 760,
+        "Right": 1280,
+        "Bottom": 800,
+        "Dpi": 96,
+        "Edge": "Bottom"
+      },
+      "cases": 6,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "dxgi",
+      "position": "Left",
+      "pid": 6672,
+      "sha256": "b1b2c69cb8bc46ffeb22ed5e61340519d46e211b595a3edca7900aaf284a4fcf",
+      "geometry": {
+        "Left": 0,
+        "Top": 0,
+        "Right": 62,
+        "Bottom": 800,
+        "Dpi": 96,
+        "Edge": "Left"
+      },
+      "cases": 6,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "dxgi",
+      "position": "Bottom",
+      "pid": 6828,
+      "sha256": "b1b2c69cb8bc46ffeb22ed5e61340519d46e211b595a3edca7900aaf284a4fcf",
+      "geometry": {
+        "Left": 0,
+        "Top": 760,
+        "Right": 1280,
+        "Bottom": 800,
+        "Dpi": 96,
+        "Edge": "Bottom"
+      },
+      "cases": 6,
+      "passed": true,
+      "exit_verified": true
+    }
+  ],
+  "passed": true
+}

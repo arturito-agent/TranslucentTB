@@ -238,6 +238,16 @@ and 45-second recovery observation are diagnostic controls, not resource timing
 or a general recovery-time guarantee. Results retain any transient stop while
 the taskbar map is empty. Test only an otherwise idle synthetic desktop.
 
+`functional-matrix.ps1 -Manifest <absolute-builds.json> -OutputDirectory <new-output-directory>`
+runs all six existing `functional.ps1` patterns at Left and Bottom with both
+backends, checking actual geometry and exact colors before retaining each
+receipt. Within PowerShell, `-Positions Left,Right,Bottom` can select the desired
+distinct edges. It waits for initial shell setup, verifies executable hashes
+and worker ownership, restores candidate configuration and closes its owned
+apps/fixtures. Run this outside resource measurements. The selected taskbar
+position remains applied for subsequent tests; restore the prior environment
+when the overall experiment ends.
+
 Benchmarks also record fixture and harness processes separately as test overhead.
 Use `benchmark.ps1 -IncludeGpu` (or `measure.ps1 -IncludeGpu`) for the next series
 on this VM, where GPU counters are available. The test-only PDH reader reuses
