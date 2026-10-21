@@ -6,7 +6,8 @@ param(
     [int] $Repetitions = 3,
     [int] $WarmupSeconds = 120,
     [int] $DurationSeconds = 305,
-    [switch] $Smoke
+    [switch] $Smoke,
+    [switch] $IncludeGpu
 )
 $ErrorActionPreference = 'Stop'
 if ($Repetitions -lt 1 -or $WarmupSeconds -lt 0 -or $DurationSeconds -lt 1) { throw 'Invalid timing' }
@@ -128,10 +129,12 @@ try {
                 if($target.HasExited -or $readyDeadline.Elapsed.TotalSeconds -gt 10){throw 'Target not ready: begin with an awake, unlocked actual console'}
                 Start-Sleep -Milliseconds 100
             }
-            $receipt = [ordered]@{label=$label;diagnostic_only=[bool]$Smoke;commit=$build.commit;executable_sha256=$build.sha256;pid=$target.Id;start_qpc=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency;warmup_seconds=$WarmupSeconds;duration_seconds=$DurationSeconds}
+            $receipt = [ordered]@{label=$label;diagnostic_only=[bool]$Smoke;commit=$build.commit;executable_sha256=$build.sha256;pid=$target.Id;start_qpc=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency;warmup_seconds=$WarmupSeconds;duration_seconds=$DurationSeconds;gpu_enabled=[bool]$IncludeGpu}
             $receipt | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'current-phase.json')
             $csv = Join-Path $OutputDirectory "$label.csv"
             $metricCode = "& $(Quote-PS (Join-Path $PSScriptRoot 'measure.ps1')) -Output $(Quote-PS $csv) -Label '$label' -Commit '$($build.commit)' -TargetProcessId $($target.Id) -WorkloadProcessId $($fixture.Id) -HarnessProcessId $PID -WarmupSeconds $WarmupSeconds -DurationSeconds $DurationSeconds"
+            if ($IncludeGpu) { $metricCode += ' -IncludeGpu' }
+            if ($name -ne 'baseline') { $metricCode += ' -RequireDynamic' }
             $collector = Start-Script $metricCode
             if (-not $collector.WaitForExit(($WarmupSeconds+$DurationSeconds+30)*1000) -or $collector.ExitCode -ne 0) { throw "Collector failed: $label" }
             if (-not [DynamicBenchmark]::FixtureExists($fixture.Id)) { throw 'Fixture vanished during measurement' }

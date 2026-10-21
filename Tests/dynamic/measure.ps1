@@ -8,10 +8,13 @@ param(
     [int] $WorkloadProcessId = 0,
     [int] $HarnessProcessId = 0,
     [string] $Commit = '',
-    [switch] $SystemOnly
+    [switch] $SystemOnly,
+    [switch] $IncludeGpu,
+    [switch] $RequireDynamic
 )
 $ErrorActionPreference = 'Stop'
 if ($WarmupSeconds -lt 0 -or $DurationSeconds -lt 1 -or $IntervalSeconds -lt 1) { throw 'Invalid interval' }
+if ($RequireDynamic -and $TargetProcessId -le 0) { throw 'RequireDynamic needs an explicit target PID' }
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -76,9 +79,17 @@ function Read-Metric([scriptblock] $Read, [string] $Name) {
 $logical = [Environment]::ProcessorCount
 [DynamicMetrics]::PhysicalCoordinates()
 $message = [DynamicMetrics]::RegisterWindowMessage('TTB_QueryDynamicStats')
+if (Test-Path -LiteralPath $Output) { throw 'Output already exists; choose a new measurement file' }
+$gpuOutput = $Output + '.gpu.jsonl'
+if ($IncludeGpu -and (Test-Path -LiteralPath $gpuOutput)) { throw 'GPU output already exists; choose a new measurement file' }
+$gpu = $null
+try {
+if ($IncludeGpu) {
+    . (Join-Path $PSScriptRoot 'gpu-counters.ps1')
+    $gpu = New-Object DynamicGpuCounters
+}
 Start-Sleep -Seconds $WarmupSeconds
 $watch = [Diagnostics.Stopwatch]::StartNew()
-if (Test-Path -LiteralPath $Output) { throw 'Output already exists; choose a new measurement file' }
 $deadline = 0.0
 while ($true) {
     $elapsed = $watch.Elapsed.TotalSeconds
@@ -132,9 +143,18 @@ while ($true) {
         $rows.Add([pscustomobject]$row)
     }
     $rows | Export-Csv -LiteralPath $Output -NoTypeInformation -Encoding UTF8 -Append
+    if ($RequireDynamic) {
+        $targetRow = @($rows | Where-Object pid -eq $TargetProcessId)[0]
+        if ($targetRow.dynamic_stats_available -ne $true -or $targetRow.capture_stats_available -ne $true -or
+            $targetRow.dynamic_timer -ne 1 -or $targetRow.dynamic_paused -ne 0) {
+            throw 'Candidate sampler paused or stopped; retained the failing observation'
+        }
+    }
+    if ($gpu) { Write-DynamicGpuObservation $gpu $rows $gpuOutput $Label $Commit }
     if ($elapsed -ge $DurationSeconds) { break }
     do { $deadline += $IntervalSeconds } while ($deadline -le $watch.Elapsed.TotalSeconds)
     $remaining = [Math]::Min($deadline,$DurationSeconds) - $watch.Elapsed.TotalSeconds
     if ($remaining -gt 0) { Start-Sleep -Milliseconds ([int][Math]::Ceiling($remaining * 1000)) }
 }
+} finally { if ($gpu) { $gpu.Dispose() } }
 Write-Output "Saved process observations through $elapsed seconds to $Output"

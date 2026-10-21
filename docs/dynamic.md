@@ -163,6 +163,25 @@ clock configuration must be recorded separately. The CSV streams each observatio
 batch so a failed long run retains diagnostic data. An existing output is rejected.
 The collector includes ExplorerPatcher's optional DWM helper when present.
 Benchmarks also record fixture and harness processes separately as test overhead.
+Use `benchmark.ps1 -IncludeGpu` (or `measure.ps1 -IncludeGpu`) for the next series
+on this VM, where GPU counters are available. The test-only PDH reader reuses
+one query and native buffer, writing `<process.csv>.gpu.jsonl` with QPC bounds,
+per-engine utilization and per-process dedicated/shared graphics bytes. Only
+the CPU observer's process scope and provider-error records are retained.
+Unavailable values remain null; rate counters need two samples, so an initial
+engine observation can be unavailable. Interpret subsequent interval rates
+separately from the initial point. See Microsoft's
+[PDH array documentation](https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhgetformattedcounterarrayw).
+Keep engine instances separate. Per-process graphics-memory values include
+cross-process sharing and must not be summed as a unique physical footprint or
+added to private commit; see Microsoft's
+[GPU memory accounting explanation](https://devblogs.microsoft.com/directx/gpus-in-the-task-manager/).
+These are the guest's counters, not physical-GPU power measurements. The aborted
+first series used its original CPU/RAM collector throughout; no GPU results are
+retroactively attributed to it.
+Candidate phases also use `-RequireDynamic`: the collector saves the first
+stopped/paused observation and fails immediately, instead of continuing a known
+invalid five-minute interval. The baseline does not require Dynamic.
 `summarize.py` reports per-process absolute metrics and rates, preserves missing
 values and refuses short/SMOKE data as benchmarks. Its optional DWM stream
 interpolates cumulative CPU at common QPC endpoints only when the observer
