@@ -104,7 +104,7 @@ int main()
 		Check(!Dynamic::SampleGeometry({0,0,4,4}, {0,0,4,4}), "no adjacent space");
 		Check(!Dynamic::SampleGeometry(monitor, {-1921,-100,-1872,980}), "out of monitor rejected");
 		// White content with a thin gray adjacent border, as in a document preview.
-		// Read through real geometry and a padded full-image stride, not a uniform strip.
+		// Extract through real geometry from a full image, not a uniform strip.
 		for (const auto edge : {Dynamic::Edge::Bottom, Dynamic::Edge::Left, Dynamic::Edge::Right})
 		{
 			const Rect screen{0,0,64,48};
@@ -126,8 +126,7 @@ int main()
 			}
 			const auto offset = static_cast<std::size_t>((rect.top * 64 + rect.left) * 4);
 			const auto bytes = std::span<const std::uint8_t>(content).subspan(offset);
-			// Trim to the minimal view size while retaining the full-image row pitch.
-			// The capture backends use their own complete row allocations.
+			// Pack the selected line like the GDI capture buffer.
 			std::vector<std::uint8_t> captured(static_cast<std::size_t>(steps) * 4);
 			for(int step=0;step<steps;++step)
 			{
