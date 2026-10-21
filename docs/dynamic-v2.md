@@ -32,6 +32,47 @@ retains the documented limitation on dark backgrounds.
 
 ## Validation and measurements
 
-Windows build, actual VM functional checks, a brief approximate consumption
-observation, and final extracted-package verification are pending. Existing
-v1 resource figures do not measure v2. No long benchmark matrix is required.
+Native source `fb366959d63be64612b0de7f47ae0851c79c15e3`, GDI, passed
+84 native tests and 2,029 portable checks in [Windows CI](https://github.com/arturito-agent/TranslucentTB/actions/runs/39641419159).
+The executable SHA-256 is
+`26e9b09e8168d555832fb1f9fecd0fa95fb6b62b4e3b09989aeb4203f8d4b6da`.
+
+A single real Windows process followed Bottom → Left → Right on Windows 11
+26100.8875 with ExplorerPatcher 26100.8457.70.3, 2 vCPUs, 6 GiB RAM, Basic Display
+Adapter and a 1280×800 SDR display at 100% scaling. Each position passed:
+
+- True maximized-window activation and exact physical taskbar colors `#F8F8F8`
+  and `#101010` before/after a native title-change event.
+- Capture counters unchanged during idle (30 seconds bottom, 5 seconds each side),
+  both periodic/burst timers off and zero pending reads.
+- A silent paint retained the old color; the next title event updated it and
+  drained its three-read burst.
+- Restoring the window stopped capture; the application exited gracefully.
+
+A separate six-event sequence over about 18 seconds completed 18 captures and
+returned to idle. Approximate **application-only** consumption from this brief run:
+
+| Observation | CPU, one logical core | Private commit | Working set |
+| --- | ---: | ---: | ---: |
+| Bottom idle, 30 s | below process-time resolution | 9.3 MiB | 49 MiB |
+| Six events, 18 s | about 0.09% | 9.3 MiB | 47 MiB |
+| Side idle, 5 s each | about 0–0.3% | 9.2–9.3 MiB | 43–46 MiB |
+
+The active sequence is about 0.04% of this two-vCPU VM's total CPU capacity.
+The short side intervals are noisy: one 15.6 ms process-time tick gives about
+0.3% of one core. Zero recorded CPU does not mean literally zero instructions;
+zero capture is established independently by the counters. Working set includes
+resident shared framework pages, so private commit alone is not total RAM.
+Explorer/DWM/GPU were not remeasured for v2. These are approximations from one
+VM, not universal performance guarantees or the older v1 comparison.
+
+[Raw synthetic observations](dynamic-results/v2-fb36695.json) preserve timings,
+CPU, memory and capture counters. Reproduce the scoped check using
+`Tests/dynamic/v2-check.ps1` with a fresh output directory and the reviewed
+ExplorerPatcher version. No long benchmark matrix is required.
+
+The final distribution package is checked separately for extraction, launch,
+menu selection, settings persistence and graceful exit before publication.
+Native scroll/selection hooks are implemented; the live color-update checks
+above specifically exercised title events and maximize/restore. Browser/provider
+coverage, multiple monitors and HDR were not established by this run.

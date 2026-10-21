@@ -67,5 +67,6 @@ tests do not establish readability. See the validation report for recovery,
 display, scaling and other tested or unavailable combinations.
 
 GDI is selected using the existing approximate [resource comparison](dynamic-resources.md).
-Final package verification and publication are still pending. An intermediate
-CI artifact is not the final downloadable release.
+Download the **Dynamic v2** release asset from this fork's [releases](https://github.com/arturito-agent/TranslucentTB/releases).
+Its `BUILD.json` pins the native source and bundled documentation; `SHA256SUMS`
+verifies each included file. See [v2 validation and approximations](dynamic-v2.md).
