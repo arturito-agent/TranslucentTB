@@ -6,8 +6,10 @@ Start opened, Search opened, Task View opened or Battery saver. Existing
 appearance selection and application rules determine which monitor needs it.
 In JSON, set `"accent": "dynamic"` on any supported appearance or rule.
 
-This is an experiment in progress. Windows integration, benchmarks and lateral
-taskbar compatibility are not yet verified. No performance result is claimed.
+This is an experiment in progress. The native menu, bottom-taskbar color,
+configuration persistence and exit restoration were exercised on Windows 11
+26100.8875 with revision 3ea6890. Full integration coverage, benchmarks and lateral
+taskbar compatibility remain pending. No performance result is claimed.
 
 ## Sampling and selection
 
@@ -40,7 +42,11 @@ translated before entering Windows composition APIs.
 
 ## Build and tests
 
-Use the upstream [build instructions](../CONTRIBUTING.md), Release x64. The
+Use the upstream [build instructions](../CONTRIBUTING.md), Release x64. Portable
+execution also requires a desktop Visual C++ v14 x64 runtime at least as recent
+as the compiler, in addition to the WinUI/UWP framework dependencies. Obtain the
+official package from [Microsoft's supported runtime downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/).
+The
 `Dynamic Windows build` workflow builds the pinned upstream baseline and this
 branch with the same runner family and configuration, then uploads test output
 and Windows artifacts. It does not sign or publish installers. Runner/image and
@@ -75,16 +81,28 @@ loss. Rotated outputs are currently unsupported in the experimental DXGI path.
 printing HRESULTs and selected colors without modifying the taskbar.
 
 `Tests/dynamic/fixture.ps1` creates only synthetic patterns. Run it in the
-interactive session; Escape closes it. `measure.ps1` collects bounded process
+interactive session; Escape closes it. Choose Vertical orientation for lateral
+taskbars. The fixture uses physical-pixel DPI awareness and keeps its display on
+for repeatability; `-AllowDisplaySleep` disables that test-only power request.
+Production Dynamic itself never prevents screen sleep. `measure.ps1` collects bounded process
 observations to a specified CSV after a warmup. Keep fixture, measurement
 configuration and visualization connection unchanged between compared runs.
 These are experiment tools, not permanent runtime helpers.
+
+The collector includes a final endpoint, checks an optional target PID, keeps
+the observer's costs separate, and leaves unavailable metrics empty with an
+error reason instead of omitting the process or reporting zero. Protected DWM
+CPU counters may need a separate elevated read-only observer. The instance can
+be queried or closed gracefully with `session.ps1`, which checks its executable
+path and the ownership of both native windows before acting.
 
 The worker accepts the registered read-only message `TTB_QueryDynamicStats`.
 Its wParam selects samples attempted (0), confirmed color changes (1), actual
 Dynamic appearance applications including event restorations (2), last confirmed
 RGB packed as 0xRRGGBB (3), latest winning run length (4), timer active (5),
-session/display paused (6), or latest sample GetTickCount64 value (7). No log is
+session/display paused (6), or latest sample GetTickCount64 value (7). Field 255
+returns the protocol marker 0x44594E01. Match both the worker class and its
+`TTB_WorkerWindow` caption; an empty string caption does not match it. No log is
 written in the normal capture path. An application count may exceed a color
 change count because real Explorer events require restoration.
 

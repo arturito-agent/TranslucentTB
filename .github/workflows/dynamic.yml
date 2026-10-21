@@ -9,6 +9,11 @@ on:
         type: choice
         options: [dynamic, baseline, both]
         default: dynamic
+      backend:
+        description: Capture backend for the Dynamic comparison build
+        type: choice
+        options: [GDI, DXGI]
+        default: GDI
 
 permissions:
   contents: read
@@ -68,7 +73,7 @@ jobs:
       - name: Build Release x64
         shell: pwsh
         run: |
-          msbuild TranslucentTB.slnx /m:1 /p:BuildInParallel=false /p:Configuration=Release /p:Platform=x64 /p:BuildType=Dev /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /v:minimal
+          msbuild TranslucentTB.slnx /m:1 /p:BuildInParallel=false /p:Configuration=Release /p:Platform=x64 /p:BuildType=Dev /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /p:DynamicBackend=${{ inputs.backend || 'GDI' }} /v:minimal
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Run upstream and configuration tests
         shell: pwsh
@@ -87,7 +92,7 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: windows-x64-${{ matrix.variant }}
+          name: windows-x64-${{ matrix.variant }}${{ inputs.backend == 'DXGI' && '-dxgi' || '' }}
           path: |
             AppPackage/bin/x64/Release/**
             x64/Release/Tests.exe

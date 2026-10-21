@@ -331,6 +331,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		// Read-only counters; no continuous logging or benchmark file writes.
 		switch (wParam)
 		{
+		case 255: return 0x44594E01; // Distinguish missing telemetry from valid zero counts.
 		case 0: return static_cast<LRESULT>(m_DynamicSamples);
 		case 1: return static_cast<LRESULT>(m_DynamicChanges);
 		case 2: return static_cast<LRESULT>(m_DynamicApplications);
@@ -362,7 +363,9 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	if (uMsg == WM_POWERBROADCAST && (wParam == PBT_APMRESUMEAUTOMATIC || wParam == PBT_APMRESUMESUSPEND))
 	{
-		m_DynamicDisplayOff = false;
+		// Automatic background resume does not imply that a screen is on.
+		// Wait for display-on notification or interactive resume in that case.
+		m_DynamicDisplayOff = wParam == PBT_APMRESUMEAUTOMATIC;
 		m_DynamicCapture.Reset();
 		UpdateDynamicTimer();
 		return TRUE;

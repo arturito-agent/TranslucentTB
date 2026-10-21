@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "../event.h"
 #include "../factory.h"
 #include "../PropertyChangedBase.hpp"
@@ -75,6 +76,7 @@ namespace winrt::TranslucentTB::Xaml::Pages::implementation
 
 		txmp::LogSinkState m_SinkState = txmp::LogSinkState::Failed;
 		bool m_BlurSupported, m_HasPackageIdentity, m_SystemHasBattery;
+		std::array<hstring, 7> m_AccentColorLabels;
 	};
 }
 

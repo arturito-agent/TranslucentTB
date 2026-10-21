@@ -70,6 +70,13 @@ namespace winrt::TranslucentTB::Xaml::Pages::implementation
 				else if (tag.try_as<hstring>() == L"Color")
 				{
 					item.IsEnabled(enabled && appearance.Accent() != txmp::AccentState::Normal);
+					if (const auto colorItem = item.try_as<wuxc::MenuFlyoutItem>())
+					{
+						auto &originalLabel = m_AccentColorLabels.at(static_cast<std::size_t>(state));
+						if (originalLabel.empty()) originalLabel = colorItem.Text();
+						colorItem.Text(appearance.Accent() == txmp::AccentState::Dynamic
+							? hstring(L"Fallback color") : originalLabel);
+					}
 				}
 			}
 		}

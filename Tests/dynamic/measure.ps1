@@ -2,8 +2,10 @@ param(
     [Parameter(Mandatory=$true)][string] $Output,
     [Parameter(Mandatory=$true)][string] $Label,
     [int] $WarmupSeconds = 120,
-    [int] $DurationSeconds = 300,
-    [int] $IntervalSeconds = 5
+    [int] $DurationSeconds = 305,
+    [int] $IntervalSeconds = 5,
+    [int] $TargetProcessId = 0,
+    [string] $Commit = ''
 )
 $ErrorActionPreference = 'Stop'
 if ($WarmupSeconds -lt 0 -or $DurationSeconds -lt 1 -or $IntervalSeconds -lt 1) { throw 'Invalid interval' }
@@ -11,52 +13,96 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public static class DynamicMetrics {
-    [DllImport("user32.dll")] public static extern uint GetGuiResources(IntPtr process, uint flags);
-    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
+    [StructLayout(LayoutKind.Sequential)] public struct FileTime { public uint Low,High; }
+    [DllImport("kernel32.dll",SetLastError=true)] static extern IntPtr OpenProcess(uint access,bool inherit,uint pid);
+    [DllImport("kernel32.dll",SetLastError=true)] static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(IntPtr handle,out FileTime created,out FileTime exited,out FileTime kernel,out FileTime user);
+    [DllImport("kernel32.dll")] static extern void SetLastError(uint error);
+    [DllImport("user32.dll",SetLastError=true)] static extern uint GetGuiResources(IntPtr process,uint flags);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string cls,string title);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern uint RegisterWindowMessage(string name);
-    [DllImport("user32.dll")] public static extern IntPtr SendMessageTimeout(IntPtr wnd, uint msg, UIntPtr wp, IntPtr lp, uint flags, uint timeout, out UIntPtr result);
-    public static ulong Read(IntPtr window, uint message, uint field) {
+    [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SendMessageTimeout(IntPtr wnd,uint msg,UIntPtr wp,IntPtr lp,uint flags,uint timeout,out UIntPtr result);
+    public sealed class Counters { public double? CpuSeconds; public uint? GdiObjects,UserObjects; public string Errors=""; }
+    static uint? Gui(IntPtr handle,uint flag,Counters counters) {
+        SetLastError(0);
+        uint value=GetGuiResources(handle,flag);
+        int error=Marshal.GetLastWin32Error();
+        if(value==0 && error!=0) { counters.Errors+="GetGuiResources("+flag+"):"+error+";";return null; }
+        return value;
+    }
+    public static Counters ReadCounters(uint pid) {
+        Counters counters=new Counters();
+        IntPtr handle=OpenProcess(0x1000,false,pid); // PROCESS_QUERY_LIMITED_INFORMATION
+        if(handle==IntPtr.Zero) { counters.Errors="OpenProcess:"+Marshal.GetLastWin32Error();return counters; }
+        try {
+            FileTime c,e,k,u;
+            if(GetProcessTimes(handle,out c,out e,out k,out u)) {
+                ulong kernel=((ulong)k.High<<32)|k.Low, user=((ulong)u.High<<32)|u.Low;
+                counters.CpuSeconds=(kernel+user)/10000000.0;
+            } else counters.Errors+="GetProcessTimes:"+Marshal.GetLastWin32Error()+";";
+            counters.GdiObjects=Gui(handle,0,counters); counters.UserObjects=Gui(handle,1,counters);
+        } finally { CloseHandle(handle); }
+        return counters;
+    }
+    public static ulong? Read(IntPtr window,uint message,uint field) {
         UIntPtr result;
-        if(SendMessageTimeout(window,message,(UIntPtr)field,IntPtr.Zero,2,100,out result)==IntPtr.Zero) return 0;
+        if(SendMessageTimeout(window,message,(UIntPtr)field,IntPtr.Zero,2,100,out result)==IntPtr.Zero) return null;
         return result.ToUInt64();
     }
 }
 '@
+function Read-Metric([scriptblock] $Read, [string] $Name) {
+    try {
+        $value = & $Read
+        if ($null -eq $value) { $readErrors.Add("${Name}:unavailable"); return $null }
+        return $value
+    } catch { $readErrors.Add("${Name}:$($_.Exception.Message)"); return $null }
+}
 $logical = [Environment]::ProcessorCount
 $message = [DynamicMetrics]::RegisterWindowMessage('TTB_QueryDynamicStats')
 Start-Sleep -Seconds $WarmupSeconds
 $watch = [Diagnostics.Stopwatch]::StartNew()
 $rows = New-Object 'System.Collections.Generic.List[object]'
 $deadline = 0.0
-while ($watch.Elapsed.TotalSeconds -le $DurationSeconds) {
+while ($true) {
     $elapsed = $watch.Elapsed.TotalSeconds
-    $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow',$null)
-    foreach ($process in Get-Process -Name TranslucentTB,explorer,dwm -ErrorAction SilentlyContinue) {
-        try {
-            $process.Refresh()
-            $dynamic = $process.ProcessName -eq 'TranslucentTB' -and $window -ne [IntPtr]::Zero
-            $rows.Add([pscustomobject]@{
-                label=$Label; elapsed_seconds=$elapsed; timestamp_utc=[DateTime]::UtcNow.ToString('o')
-                process=$process.ProcessName; pid=$process.Id; logical_processors=$logical
-                cpu_seconds=$process.TotalProcessorTime.TotalSeconds
-                private_bytes=$process.PrivateMemorySize64; working_set_bytes=$process.WorkingSet64
-                peak_working_set_bytes=$process.PeakWorkingSet64; handles=$process.HandleCount
-                gdi_objects=[DynamicMetrics]::GetGuiResources($process.Handle,0)
-                user_objects=[DynamicMetrics]::GetGuiResources($process.Handle,1)
-                dynamic_samples=$(if($dynamic){[DynamicMetrics]::Read($window,$message,0)}else{0})
-                dynamic_changes=$(if($dynamic){[DynamicMetrics]::Read($window,$message,1)}else{0})
-                dynamic_applications=$(if($dynamic){[DynamicMetrics]::Read($window,$message,2)}else{0})
-                dynamic_rgb=$(if($dynamic){[DynamicMetrics]::Read($window,$message,3)}else{0})
-                dynamic_run_length=$(if($dynamic){[DynamicMetrics]::Read($window,$message,4)}else{0})
-                dynamic_timer=$(if($dynamic){[DynamicMetrics]::Read($window,$message,5)}else{0})
-                dynamic_paused=$(if($dynamic){[DynamicMetrics]::Read($window,$message,6)}else{0})
-            })
-        } catch { Write-Warning "Cannot sample $($process.ProcessName): $($_.Exception.Message)" }
+    $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
+    $supportsStats = $window -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($window,$message,255) -eq 0x44594E01
+    $processes = @(Get-Process -Name TranslucentTB,explorer,dwm -ErrorAction SilentlyContinue)
+    if ($TargetProcessId -gt 0 -and -not ($processes | Where-Object Id -eq $TargetProcessId)) { throw "Target process $TargetProcessId exited during measurement" }
+    $processes += Get-Process -Id $PID
+    foreach ($process in $processes) {
+        $readErrors = New-Object 'System.Collections.Generic.List[string]'
+        try { $process.Refresh() } catch { $readErrors.Add($_.Exception.Message) }
+        $native = [DynamicMetrics]::ReadCounters($process.Id)
+        if ($native.Errors) { $readErrors.Add($native.Errors) }
+        $dynamic = $supportsStats -and $process.ProcessName -eq 'TranslucentTB'
+        $row = [ordered]@{
+            label=$Label; commit=$Commit; elapsed_seconds=$elapsed; timestamp_utc=[DateTime]::UtcNow.ToString('o')
+            process=$process.ProcessName; pid=$process.Id; logical_processors=$logical
+            role=$(if($process.Id -eq $PID){'observer'}elseif($process.ProcessName -eq 'TranslucentTB'){'target'}elseif($process.ProcessName -eq 'dwm'){'compositor'}else{'shell'})
+            cpu_seconds=$native.CpuSeconds
+            private_bytes=(Read-Metric { $process.PrivateMemorySize64 } 'private_bytes')
+            working_set_bytes=(Read-Metric { $process.WorkingSet64 } 'working_set_bytes')
+            peak_working_set_bytes=(Read-Metric { $process.PeakWorkingSet64 } 'peak_working_set_bytes')
+            handles=(Read-Metric { $process.HandleCount } 'handles')
+            gdi_objects=$native.GdiObjects; user_objects=$native.UserObjects
+            dynamic_stats_available=$dynamic
+            dynamic_samples=$(if($dynamic){[DynamicMetrics]::Read($window,$message,0)}else{$null})
+            dynamic_changes=$(if($dynamic){[DynamicMetrics]::Read($window,$message,1)}else{$null})
+            dynamic_applications=$(if($dynamic){[DynamicMetrics]::Read($window,$message,2)}else{$null})
+            dynamic_rgb=$(if($dynamic){[DynamicMetrics]::Read($window,$message,3)}else{$null})
+            dynamic_run_length=$(if($dynamic){[DynamicMetrics]::Read($window,$message,4)}else{$null})
+            dynamic_timer=$(if($dynamic){[DynamicMetrics]::Read($window,$message,5)}else{$null})
+            dynamic_paused=$(if($dynamic){[DynamicMetrics]::Read($window,$message,6)}else{$null})
+            errors=($readErrors -join '|')
+        }
+        $rows.Add([pscustomobject]$row)
     }
-    $deadline += $IntervalSeconds
-    $remaining = [Math]::Min($deadline, $DurationSeconds) - $watch.Elapsed.TotalSeconds
-    if ($remaining -gt 0) { Start-Sleep -Milliseconds ([int]($remaining * 1000)) }
-    if ($deadline -gt $DurationSeconds) { break }
+    if ($elapsed -ge $DurationSeconds) { break }
+    do { $deadline += $IntervalSeconds } while ($deadline -le $watch.Elapsed.TotalSeconds)
+    $remaining = [Math]::Min($deadline,$DurationSeconds) - $watch.Elapsed.TotalSeconds
+    if ($remaining -gt 0) { Start-Sleep -Milliseconds ([int][Math]::Ceiling($remaining * 1000)) }
 }
 $rows | Export-Csv -LiteralPath $Output -NoTypeInformation -Encoding UTF8
 Write-Output "Saved $($rows.Count) process observations to $Output"
