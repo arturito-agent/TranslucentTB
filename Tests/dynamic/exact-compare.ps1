@@ -1,7 +1,8 @@
 param(
  [Parameter(Mandatory=$true)][string]$ExecutablePath,
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
- [switch]$SidesOnly
+ [switch]$SidesOnly,
+ [switch]$WithBrowser
 )
 $ErrorActionPreference='Stop'
 if((Test-Path $OutputDirectory) -or (Get-Process TranslucentTB -ErrorAction SilentlyContinue)){throw 'Fresh output and no existing target required'}
@@ -22,6 +23,11 @@ public static class ExactProbe {
  [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr w);
  [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr w,IntPtr dc);
  [DllImport("gdi32.dll")] static extern uint GetPixel(IntPtr dc,int x,int y);
+ [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc p,IntPtr l);
+ delegate bool EnumProc(IntPtr w,IntPtr l);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr w,System.Text.StringBuilder s,int n);
+ [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr w,uint m,IntPtr p,IntPtr l);
+ public static IntPtr Browser(){IntPtr found=IntPtr.Zero;EnumWindows((w,l)=>{var t=new System.Text.StringBuilder(256);GetWindowText(w,t,256);if(t.ToString().StartsWith("Dynamic browser ")){found=w;return false;}return true;},IntPtr.Zero);return found;}
  public static ulong Read(uint field) {UIntPtr r;var w=FindWindow("TTB_WorkerWindow","TTB_WorkerWindow");if(w==IntPtr.Zero||SendMessageTimeout(w,RegisterWindowMessage("TTB_QueryDynamicStats"),(UIntPtr)field,IntPtr.Zero,2,1000,out r)==IntPtr.Zero)throw new Exception("Worker unavailable");return r.ToUInt64();}
  public static uint Pixel(int x,int y){var dc=GetDC(IntPtr.Zero);try{uint c=GetPixel(dc,x,y);if(c==0xffffffff)throw new Exception("Pixel unavailable");return ((c&255)<<16)|(c&0xff00)|((c>>16)&255);}finally{ReleaseDC(IntPtr.Zero,dc);}}
 }
@@ -32,7 +38,7 @@ $settings=Join-Path (Split-Path $ExecutablePath) 'settings.json'
 $saved=if(Test-Path $settings){[IO.File]::ReadAllBytes($settings)}else{$null}
 $rows=New-Object 'System.Collections.Generic.List[object]'
 $pixels=New-Object 'System.Collections.Generic.List[object]'
-$target=$null;$form=$null;$version='';$position='Bottom'
+$target=$null;$form=$null;$browserWindow=[IntPtr]::Zero;$version='';$position='Bottom'
 function Pump([double]$Seconds){$w=[Diagnostics.Stopwatch]::StartNew();while($w.Elapsed.TotalSeconds -lt $Seconds){[Windows.Forms.Application]::DoEvents();Start-Sleep -Milliseconds 25}}
 function Save-Rows {$rows|ConvertTo-Json -Depth 6|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'observations.json')}
 function Snapshot([string]$Stage){
@@ -96,6 +102,24 @@ try {
    if($first.frames -ne $last.frames -or $last.periodic -or $last.burst -or $last.animation_timer){throw 'Capture or animation survived deactivation'}
    $form.Close();$form.Dispose();$form=$null
   }
+  if($WithBrowser -and -not $SidesOnly){
+   $edge=Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
+   if(-not(Test-Path $edge)){throw 'Owned offline Edge check requires installed Edge'}
+   $profile=Join-Path $OutputDirectory ('browser-profile-'+$version)
+   $page='file:///'+(Join-Path $PSScriptRoot 'browser-events.html').Replace('\','/')
+   Start-Process $edge -ArgumentList @('--no-first-run','--no-default-browser-check','--disable-background-networking','--start-maximized',('--user-data-dir="'+$profile+'"'),('--app='+$page))|Out-Null
+   $wait=[Diagnostics.Stopwatch]::StartNew()
+   do{Pump 0.1;$browserWindow=[ExactProbe]::Browser();if($wait.Elapsed.TotalSeconds -gt 12){throw 'Owned browser app window not found'}}while($browserWindow -eq [IntPtr]::Zero)
+   $browserOwner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId($browserWindow,[ref]$browserOwner)
+   $commandLine=(Get-CimInstance Win32_Process -Filter ("ProcessId="+$browserOwner)).CommandLine
+   if(-not $commandLine.Contains($profile)){throw 'Refusing an unrelated browser window'}
+   Pump 5;$null=Snapshot 'browser-idle';Assert-Color 0xF9F6F3
+   Pump 7;$null=Snapshot 'browser-title-event';Assert-Color 0x436E99
+   Pump 8;$null=Snapshot 'browser-silent-paint'
+   if($version -eq 'dynamic'){Assert-Color 0xE8DDD1}
+   Pump 8;$null=Snapshot 'browser-final-event';Assert-Color 0xE8DDD1
+   [void][ExactProbe]::PostMessage($browserWindow,0x10,[IntPtr]::Zero,[IntPtr]::Zero);$browserWindow=[IntPtr]::Zero;Pump 2
+  }
   & (Join-Path $PSScriptRoot 'session.ps1') -Action Exit -ExecutablePath $ExecutablePath -Output (Join-Path $OutputDirectory ($version+'-exit.json'))
   $target=$null;Pump 1
  }
@@ -103,6 +127,7 @@ try {
  'complete'|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'status.txt')
 } catch {$_|Out-String|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'error.txt');throw}
 finally {
+ if($browserWindow -ne [IntPtr]::Zero){[void][ExactProbe]::PostMessage($browserWindow,0x10,[IntPtr]::Zero,[IntPtr]::Zero)}
  if($form){$form.Close();$form.Dispose()}
  if($target -and -not $target.HasExited){& (Join-Path $PSScriptRoot 'session.ps1') -Action Exit -ExecutablePath $ExecutablePath -Output (Join-Path $OutputDirectory 'cleanup-exit.json')}
  if($null -ne $saved){[IO.File]::WriteAllBytes($settings,$saved)}elseif(Test-Path $settings){Remove-Item $settings}

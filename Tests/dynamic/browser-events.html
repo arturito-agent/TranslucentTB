@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Dynamic browser idle</title>
+<style>html,body{margin:0;min-height:100%;background:#f9f6f3;color:#111;font:18px system-ui}p{padding:40px}</style>
+<p>Offline Dynamic event fixture. Title event at 8s, silent paint at 16s, final event at 24s.</p>
+<script>
+setTimeout(()=>{document.documentElement.style.background=document.body.style.background='#436e99';document.title='Dynamic browser event';},8000);
+setTimeout(()=>{document.documentElement.style.background=document.body.style.background='#e8ddd1';},16000);
+setTimeout(()=>{document.title='Dynamic browser final';},24000);
+</script></html>
