@@ -35,3 +35,7 @@ outlier and identify the exact application revision and geometry.
 `refresh-race-a1b0.json` is a negative control: bounded overlapping forced-refresh
 and sent timer messages leave the classic-taskbar sampler stopped while not
 paused. It records a reproduced defect, not a passing result or resource trial.
+`refresh-race-right-*-b464-r*.json` records three fixed-revision trials per
+backend, each with active timers and increasing attempts after the overlap.
+`functional-right-*-b464.csv` records the six color cases per backend after that
+fix. These short tests do not establish resource budgets or prolonged stability.

@@ -1,0 +1,17 @@
+﻿{
+    "commit":  "b46440a1f2feb5e5ce5538b7322bf1adbf60f7d2",
+    "pid":  7876,
+    "requested_seconds":  6,
+    "expect_stopped":  false,
+    "passed":  true,
+    "result":  {
+                   "BeforeSamples":  187,
+                   "AfterSamples":  218,
+                   "BeforeTimer":  1,
+                   "AfterTimer":  1,
+                   "Paused":  0,
+                   "RefreshCalls":  74,
+                   "TimerCalls":  289,
+                   "Errors":  0
+               }
+}

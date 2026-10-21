@@ -4,9 +4,10 @@ Experimental results as of 2026-10-21; the experiment is incomplete.
 
 Application revisions: upstream baseline
 `7d644774045429a98c07678df553b771e3b5d129`, initial native validation
-`3ea6890f1a7bf11b1b6bd8b44b6c819778458cb1`, current GDI/DXGI builds
-`a6ad586fdd243f997058c79509b5328158ade6ed`; current focus-scheduling and
-capture-counter revision `a1b05b5840d48f29487fb1622091f576fb0505bb`.
+`3ea6890f1a7bf11b1b6bd8b44b6c819778458cb1`, lateral GDI/DXGI validation
+`a6ad586fdd243f997058c79509b5328158ade6ed`, focus scheduling/counters
+`a1b05b5840d48f29487fb1622091f576fb0505bb`, per-monitor ownership ad232a0,
+and current tested application `b46440a1f2feb5e5ce5538b7322bf1adbf60f7d2`.
 
 The current source also gives each monitor a lazy capture instance, releasing
 it when its appearance stops needing Dynamic. Previously, one shared DXGI
@@ -30,14 +31,22 @@ errors. The original spontaneous trigger was not recorded. Current source skips
 sampling during temporary attribute suppression and reconciles timers after
 restoring the previous suppression flag, including nested refreshes. The
 [negative control](dynamic-results/refresh-race-a1b0.json) and
-`Tests/dynamic/refresh-race.ps1` reproduce this mechanism. The fix still needs
-its own build and live regression validation before long measurements resume.
+`Tests/dynamic/refresh-race.ps1` reproduce this mechanism. Fixed revision
+`b46440a1f2feb5e5ce5538b7322bf1adbf60f7d2` passes both Windows builds with
+83 native tests and 2,021 portable checks each. Three six-second live regression
+trials per backend on the real right classic taskbar all retain timer=1,
+paused=0, increasing attempts and zero IPC errors. Both backends also pass the
+six live color/continuity cases after the fix. These are diagnostic/functional
+results; full resource measurements and prolonged stability remain pending.
 
 ## Environment
 
 Windows 11 Enterprise LTSC Evaluation 24H2, build 26100.8875, two logical
 processors, 6 GiB guest RAM, Microsoft Basic Display Adapter 10.0.26100.1,
-1280x800 single SDR display at 100% scale. Internal SPICE console attached;
+1280x800 single SDR display at 100% scale, reported 64Hz/32bpp and Balanced power.
+Display enumeration exposes only that resolution. GPU engine and per-process
+graphics-memory counters are available through PDH; this does not establish
+physical-GPU efficiency or power use. Internal SPICE console attached;
 synthetic fixture requests display-on while running. The application itself
 does not prevent display sleep. The guest remains offline. Desktop VC++ runtime
 14.51.36247 is installed. The guest's UTC wall-clock interpretation differs
@@ -142,6 +151,14 @@ and in every collected sample. The corrected five-phase smoke passed: all target
 observations report the actual right rectangle (1218,0)..(1280,800).
 The first full right/static series aborted as described above; no resource
 budget or backend winner has been established yet.
+
+The revised worker and collector also completed a new five-phase right/static
+smoke with GPU recording and the early Dynamic health gate enabled. All target
+observations retain the real right rectangle (1218,0)..(1280,800); both candidates
+have active unpaused sampling and completed frames. All five phase receipts and
+GPU streams exist; GPU scope/status checks pass, and driver/fixture/apps are
+confirmed closed afterwards. This is a short orchestration check, not a resource
+benchmark or prolonged stability result. Full new series remain required.
 
 ## Still required
 
