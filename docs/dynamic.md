@@ -6,20 +6,13 @@ Start opened, Search opened, Task View opened or Battery saver. Existing
 appearance selection and application rules determine which monitor needs it.
 In JSON, set `"accent": "dynamic"` on any supported appearance or rule.
 
-GDI is selected for the first experimental release, using native revision
-`e4f09c8af0795a86dad562dfbea3c6225f9d9a2c`. Both candidate builds pass 83 native
-tests and 2,021 portable checks. Current real-taskbar tests retain one process
-through Bottom → Left → Right, with 36 exact-color checks and 30 Dynamic/Clear
-stages; inactive capture attempts/frames remain unchanged with timers stopped.
-See [validation status](dynamic-validation.md) for the exact revision of each
-additional integration check and the remaining final-package verification.
-
-The owner accepted existing [approximate resource results](dynamic-resources.md)
-as sufficient and closed further benchmarking. The incomplete extended matrix
-is not a release gate. Final package ordinary-use verification and downloadable
-publication remain pending. Classic taskbar glyphs still follow the system
-theme and can have poor contrast on dark backgrounds; this remains an explicit
-limitation, not an implemented contrast solution.
+GDI remains the selected capture backend. The current exact RGB / 240 ms
+transition update and brief v1/v2 comparison are documented in
+[exact color, transitions and capture strategy](dynamic-exact-transitions.md).
+That report pins native build 773bc58 and distinguishes its current validation
+from the older implementation/recovery/resource observations below. No extended
+benchmark matrix is required. Classic glyphs can have poor contrast on dark
+backgrounds; this remains a limitation.
 
 ## Sampling and selection
 
@@ -31,19 +24,20 @@ alpha is forced to 255 in Dynamic and does not change the selected RGB.
 
 Each step groups its four pixels into fixed RGB buckets of width four per
 channel. The largest bucket wins; ties prefer the previous output's bucket,
-then the first pixel in cross-strip order. Average only that bucket's pixels.
+then the first pixel in cross-strip order. Return an actual winning pixel without averaging.
 Scan the resulting representatives for the longest contiguous equal-bucket
 run. Do not add separated runs. Ties prefer the previous output's bucket,
-then the first run. The final RGB is the integer mean of run representatives.
+then the first run. The final RGB is the actual representative at the middle of that run.
 Fixed buckets prevent drift across a gradient.
 
-Require at least eight steps and 1% of the edge. Require the candidate bucket
-on two observations at least 200 ms apart; same-bucket fluctuations retain
-the prior output. The steady scheduler samples every 500 ms with timer
+Require at least eight steps and 1% of the edge. Require the exact candidate RGB
+on two observations at least 200 ms apart; even a one-level change inside the
+same bucket remains eligible. The steady scheduler samples every 500 ms with timer
 coalescing. Foreground changes and activation of Dynamic request one additional
 deferred sample after 200 ms, coalescing event bursts. All paths share a 200 ms
 minimum between attempts. Window events never capture pixels synchronously.
-Sampling only applies changed colors. Explorer
+Targets are compared by exact RGB, including ordinary appearance refreshes.
+Identical targets do not restart animations. See [exact color and transitions](dynamic-exact-transitions.md). Explorer
 invalidations may reapply cached colors. Sampling stops when no effective
 appearance is Dynamic, the session locks, or the display turns off.
 Sampling skips temporary attribute suppression during forced composition
@@ -332,8 +326,8 @@ Inspect these trajectories for memory retained after a candidate closes:
 adjacent-baseline subtraction does not remove that carryover.
 
 The worker accepts the registered read-only message `TTB_QueryDynamicStats`.
-Its wParam selects samples attempted (0), confirmed color changes (1), actual
-Dynamic appearance applications including event restorations (2), last confirmed
+Its wParam selects samples attempted (0), confirmed color changes (1), accepted
+Dynamic color targets (2), last confirmed
 RGB packed as 0xRRGGBB (3), latest winning run length (4), timer active (5),
 session/display paused (6), or latest sample GetTickCount64 value (7). Field 255
 returns the protocol marker 0x44594E01. Match both the worker class and its
@@ -400,3 +394,13 @@ The original local theme is restored on mode changes, exit and process death.
 This behavior still requires visual validation on each taskbar implementation;
 classic-taskbar contrast is not yet implemented. The fork uses a distinct TAP
 protocol version so it cannot accidentally reuse a stock appearance service.
+
+
+Capability bit 4 adds exact-target and bounded-transition counters: 30 counts
+skipped identical targets, 31 actual classic composition writes, 32 the classic
+animation timer state, 33 content-hook events and 34 filtered events. The modern
+brush animation runs inside Explorer and does not increment classic writes.
+A real shell invalidation can force a classic write without a new target.
+Capability bit 3 enables v2 burst state at 27 (timer), 28 (remaining reads), and
+29 (accepted burst requests). Field 2 counts new color target applications and
+is not a per-frame animation counter.

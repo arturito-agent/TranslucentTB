@@ -22,6 +22,13 @@ TranslucentTB instance.
   [its official repository](https://github.com/valinet/ExplorerPatcher/releases).
   This fork does not install or bundle ExplorerPatcher.
 
+## Choose a capture strategy
+
+For content-following behavior, use **Dynamic**: its periodic capture also sees
+silent page paints. Use **Dynamic v2** under Maximized window to stop captures
+at rest, accepting missed silent updates. Both now use exact source RGB and
+short color transitions. See [the comparison](dynamic-exact-transitions.md).
+
 ## Enable Dynamic v2
 
 1. Exit any other TranslucentTB instance from its tray menu.
@@ -46,6 +53,10 @@ The same appearance supports bottom, left and right taskbars. Use the taskbar
 position controls provided by the configured Windows/ExplorerPatcher setup;
 Dynamic follows the actual taskbar geometry. The top edge is outside this
 experiment's scope.
+
+When upgrading, exit the old build first. If the upstream development build
+requests a Windows restart because Explorer holds an older DLL, restart Windows
+and launch the new folder once. Do not repeatedly launch overlapping instances.
 
 ## Settings and exit
 

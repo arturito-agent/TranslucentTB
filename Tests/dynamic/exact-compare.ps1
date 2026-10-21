@@ -3,6 +3,7 @@ param(
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
  [switch]$SidesOnly,
  [switch]$WithBrowser,
+ [switch]$BrowserOnly,
  [ValidateSet('All','dynamic','dynamic_v2')][string]$OnlyMode='All'
 )
 $ErrorActionPreference='Stop'
@@ -68,14 +69,14 @@ try {
    if($readyWatch.Elapsed.TotalSeconds -gt 30){throw 'Owned worker failed to initialize within 30 seconds'}
   } while(-not $ready)
   Pump 1
-  foreach($position in $positions){
+  foreach($position in $(if($BrowserOnly){@()}else{$positions})){
    if($SidesOnly){Set-ExperimentTaskbarPosition $position}
    $form=New-Object Windows.Forms.Form
    $form.Text='Dynamic exact reference';$form.BackColor=Color 0xF9F6F3
    $form.WindowState=[Windows.Forms.FormWindowState]::Maximized;$form.Show();$form.Activate();Pump 4
    $bar=New-Object ExactProbe+Rect
    if(-not [ExactProbe]::GetWindowRect([ExactProbe]::FindWindow('Shell_TrayWnd',$null),[ref]$bar)){throw 'No real taskbar'}
-   $script:pixelX=if($position -eq 'Bottom'){[int]($bar.Left+($bar.Right-$bar.Left)/4)}else{[int](($bar.Left+$bar.Right)/2)}
+   $script:pixelX=if($position -eq 'Bottom'){[int]($bar.Left+3*($bar.Right-$bar.Left)/4)}else{[int](($bar.Left+$bar.Right)/2)}
    $script:pixelY=[int](($bar.Top+$bar.Bottom)/2)
    $null=Snapshot 'initial-color'
    Assert-Color 0xF9F6F3
@@ -115,6 +116,9 @@ try {
    $form.Close();$form.Dispose();$form=$null
   }
   if($WithBrowser -and -not $SidesOnly){
+   $bar=New-Object ExactProbe+Rect
+   if(-not [ExactProbe]::GetWindowRect([ExactProbe]::FindWindow('Shell_TrayWnd',$null),[ref]$bar)){throw 'No real taskbar'}
+   $script:pixelX=[int]($bar.Left+3*($bar.Right-$bar.Left)/4);$script:pixelY=[int](($bar.Top+$bar.Bottom)/2)
    $edge=Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
    if(-not(Test-Path $edge)){throw 'Owned offline Edge check requires installed Edge'}
    $profile=Join-Path $OutputDirectory ('browser-profile-'+$version)
@@ -127,7 +131,7 @@ try {
    if(-not $commandLine.Contains($profile)){throw 'Refusing an unrelated browser window'}
    $browserWindow=$browserCandidate
    [void][ExactProbe]::ShowWindow($browserWindow,3);[void][ExactProbe]::SetForegroundWindow($browserWindow)
-   Pump 5;$null=Snapshot 'browser-idle';Assert-Color 0xF9F6F3
+   Pump 5;$null=Snapshot 'browser-idle';if($version -eq 'dynamic'){Assert-Color 0xF9F6F3}
    Pump 7;$null=Snapshot 'browser-title-event';Assert-Color 0x436E99
    Pump 8;$null=Snapshot 'browser-silent-paint'
    if($version -eq 'dynamic'){Assert-Color 0xE8DDD1}

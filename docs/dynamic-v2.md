@@ -16,13 +16,20 @@ and the longest continuous similar-color run. The chosen RGB remains unchanged.
 - Native accessibility selection and scroll-completed events, when the app emits them.
 - Taskbar/display geometry changes, Explorer recovery, and session/display resume.
 
-Each relevant event group requests up to three confirmation reads, starting
-after about 200 ms and continuing about 300 and 500 ms apart. Repeated events
-share the pending burst; an event during a burst refreshes its bounded remaining
-reads without delaying its first deadline. Once events stop, the burst drains
-and its timer is killed. There is no permanent 500 ms timer for v2. Deactivation,
-screen-off/session-lock and shutdown cancel pending work. Original v1 retains
-its existing periodic behavior when selected.
+Each accepted event requests a fixed three-read burst, normally starting after
+about 200 ms and continuing about 300 and 500 ms apart. Notifications during a
+burst do not replenish its reads. Ordinary content first-read deadlines are
+spaced by at least two seconds; an event during cooldown queues the next bounded
+burst. Real foreground changes and v2 activation bypass this cooldown. Unchanged
+titles/rectangles and repeated selection identifiers are filtered, and taskbar
+notifications are excluded. Extra content hooks are registered only while v2 is
+effective. Once the burst drains its timer is killed. There is no permanent
+500 ms capture timer for v2. Deactivation, screen-off/session-lock and shutdown
+cancel pending capture work. Original v1 retains its periodic capture behavior.
+
+Both modes now use exact source-pixel RGB and bounded transitions; see
+[the current update and comparison](dynamic-exact-transitions.md). These changes
+postdate the v0.2.0 validation below.
 
 These are native WinEvents, not a universal browser integration or a full UI
 Automation tree observer. Applications may omit scroll/selection notifications.
@@ -30,7 +37,7 @@ Automatic page changes, delayed loads and video frames can therefore leave the
 previous color until another supported event. Classic-taskbar glyph contrast
 retains the documented limitation on dark backgrounds.
 
-## Validation and measurements
+## Historical v0.2.0 validation and measurements
 
 Native source `fb366959d63be64612b0de7f47ae0851c79c15e3`, GDI, passed
 84 native tests and 2,029 portable checks in [Windows CI](https://github.com/arturito-agent/TranslucentTB/actions/runs/39641419159).
