@@ -1,0 +1,819 @@
+{
+  "partial_only": true,
+  "position": "Right",
+  "workload": "Changing",
+  "repeat": 1,
+  "complete_condition": false,
+  "phase_validation_passed": true,
+  "separate_dwm_cpu_validated": true,
+  "gpu_scopes_validated": true,
+  "geometry": [
+    "Right",
+    "96",
+    "1218",
+    "0",
+    "1280",
+    "800"
+  ],
+  "comparisons": {
+    "gdi": {
+      "cpu_delta_one_core_percent_by_role": {
+        "target": 0.09733515442098563,
+        "shell": -0.0563526959970891,
+        "compositor": 0.10387118403760187
+      },
+      "combined_cpu_delta_one_core_percent": 0.1448536424614984,
+      "private_delta_mib_by_role": {
+        "target": 0.173828125,
+        "shell": -0.5234375,
+        "compositor": -0.447265625
+      },
+      "combined_private_delta_mib": -0.796875,
+      "absolute_roles": {
+        "compositor": {
+          "pid": "1064",
+          "process": "dwm",
+          "role": "compositor",
+          "samples": 62,
+          "duration_seconds": 305.0028551,
+          "errors": {
+            "OpenProcess:5": 62
+          },
+          "cpu_one_core_percent": 2.8343076029873266,
+          "cpu_normalized_percent": null,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 62996480.0,
+            "sampled_max": 63029248.0,
+            "last_minus_first": 12288.0,
+            "last_quarter_median_minus_first_quarter": 12288.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 126705664.0,
+            "sampled_max": 126742528.0,
+            "last_minus_first": 12288.0,
+            "last_quarter_median_minus_first_quarter": 12288.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 1585.0,
+            "sampled_max": 1587.0,
+            "last_minus_first": -2.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "gdi_objects": {
+            "available_samples": 0,
+            "median": null,
+            "sampled_max": null,
+            "last_minus_first": null,
+            "last_quarter_median_minus_first_quarter": null
+          },
+          "user_objects": {
+            "available_samples": 0,
+            "median": null,
+            "sampled_max": null,
+            "last_minus_first": null,
+            "last_quarter_median_minus_first_quarter": null
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null,
+          "separate_observer_cpu": {
+            "cpu_one_core_percent": 2.8343076029873266,
+            "method": "linear interpolation of cumulative DWM CPU at common QPC endpoints; observer gaps <=6s"
+          }
+        },
+        "shell": {
+          "pid": "4784",
+          "process": "explorer",
+          "role": "shell",
+          "samples": 62,
+          "duration_seconds": 305.0028551,
+          "errors": {},
+          "cpu_one_core_percent": 0.030737417185574406,
+          "cpu_normalized_percent": 0.015368708592787203,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 27676672.0,
+            "sampled_max": 31563776.0,
+            "last_minus_first": -3903488.0,
+            "last_quarter_median_minus_first_quarter": -2035712.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 134987776.0,
+            "sampled_max": 139829248.0,
+            "last_minus_first": -4894720.0,
+            "last_quarter_median_minus_first_quarter": -3280896.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 2083.0,
+            "sampled_max": 2233.0,
+            "last_minus_first": -166.0,
+            "last_quarter_median_minus_first_quarter": -43.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 171.0,
+            "sampled_max": 171.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 207.0,
+            "sampled_max": 232.0,
+            "last_minus_first": -27.0,
+            "last_quarter_median_minus_first_quarter": -5.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        },
+        "target": {
+          "pid": "6612",
+          "process": "TranslucentTB",
+          "role": "target",
+          "samples": 62,
+          "duration_seconds": 305.0028551,
+          "errors": {},
+          "cpu_one_core_percent": 0.09733515442098563,
+          "cpu_normalized_percent": 0.048667577210492814,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 9588736.0,
+            "sampled_max": 9666560.0,
+            "last_minus_first": -24576.0,
+            "last_quarter_median_minus_first_quarter": 53248.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 13195264.0,
+            "sampled_max": 52535296.0,
+            "last_minus_first": -40366080.0,
+            "last_quarter_median_minus_first_quarter": -25022464.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 477.0,
+            "sampled_max": 484.0,
+            "last_minus_first": -7.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 24.0,
+            "sampled_max": 24.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 34.0,
+            "sampled_max": 35.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 1.0
+          },
+          "dynamic_samples_per_second": 1.9967026203749134,
+          "dynamic_changes_per_second": 0.4983559906354464,
+          "dynamic_applications_per_second": 0.4983559906354464,
+          "captured_frames_per_second": 1.9967026203749134,
+          "capture_timeouts_per_second": 0.0,
+          "capture_failures_per_second": 0.0,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        },
+        "workload": {
+          "pid": "4596",
+          "process": "powershell",
+          "role": "workload",
+          "samples": 62,
+          "duration_seconds": 305.0028551,
+          "errors": {},
+          "cpu_one_core_percent": 5.896461196766023,
+          "cpu_normalized_percent": 2.9482305983830117,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 68722688.0,
+            "sampled_max": 68726784.0,
+            "last_minus_first": 4096.0,
+            "last_quarter_median_minus_first_quarter": -24576.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 22898688.0,
+            "sampled_max": 23695360.0,
+            "last_minus_first": -802816.0,
+            "last_quarter_median_minus_first_quarter": -593920.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 621.0,
+            "sampled_max": 625.0,
+            "last_minus_first": 4.0,
+            "last_quarter_median_minus_first_quarter": 4.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 21.0,
+            "sampled_max": 21.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 27.0,
+            "sampled_max": 28.0,
+            "last_minus_first": 1.0,
+            "last_quarter_median_minus_first_quarter": 1.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": 20.97685281635254,
+          "fixture_paints_per_second": 21.478487464821114
+        },
+        "harness": {
+          "pid": "9136",
+          "process": "powershell",
+          "role": "harness",
+          "samples": 62,
+          "duration_seconds": 305.0028551,
+          "errors": {},
+          "cpu_one_core_percent": 0.005122902864262402,
+          "cpu_normalized_percent": 0.002561451432131201,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 105263104.0,
+            "sampled_max": 105398272.0,
+            "last_minus_first": 8192.0,
+            "last_quarter_median_minus_first_quarter": 65536.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 13871104.0,
+            "sampled_max": 31653888.0,
+            "last_minus_first": -26537984.0,
+            "last_quarter_median_minus_first_quarter": -20496384.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 623.0,
+            "sampled_max": 628.0,
+            "last_minus_first": -3.0,
+            "last_quarter_median_minus_first_quarter": -2.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 0.0,
+            "sampled_max": 0.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 4.0,
+            "sampled_max": 4.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        },
+        "observer": {
+          "pid": "5876",
+          "process": "powershell",
+          "role": "observer",
+          "samples": 62,
+          "duration_seconds": 305.0028551,
+          "errors": {},
+          "cpu_one_core_percent": 0.7479438181823106,
+          "cpu_normalized_percent": 0.3739719090911553,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 78231552.0,
+            "sampled_max": 95006720.0,
+            "last_minus_first": 10694656.0,
+            "last_quarter_median_minus_first_quarter": 5550080.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 55787520.0,
+            "sampled_max": 110108672.0,
+            "last_minus_first": -46632960.0,
+            "last_quarter_median_minus_first_quarter": -44052480.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 602.0,
+            "sampled_max": 609.0,
+            "last_minus_first": 16.0,
+            "last_quarter_median_minus_first_quarter": 6.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 0.0,
+            "sampled_max": 0.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 4.0,
+            "sampled_max": 5.0,
+            "last_minus_first": 1.0,
+            "last_quarter_median_minus_first_quarter": 1.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        }
+      }
+    },
+    "dxgi": {
+      "cpu_delta_one_core_percent_by_role": {
+        "target": 0.10757883560297982,
+        "shell": 0.07940272366972785,
+        "compositor": 1.6031681661237949
+      },
+      "combined_cpu_delta_one_core_percent": 1.7901497253965026,
+      "private_delta_mib_by_role": {
+        "target": 0.583984375,
+        "shell": -0.6328125,
+        "compositor": 3.84765625
+      },
+      "combined_private_delta_mib": 3.798828125,
+      "absolute_roles": {
+        "compositor": {
+          "pid": "1064",
+          "process": "dwm",
+          "role": "compositor",
+          "samples": 62,
+          "duration_seconds": 305.0086661,
+          "errors": {
+            "OpenProcess:5": 62
+          },
+          "cpu_one_core_percent": 4.348703238191261,
+          "cpu_normalized_percent": null,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 65875968.0,
+            "sampled_max": 65912832.0,
+            "last_minus_first": -8192.0,
+            "last_quarter_median_minus_first_quarter": -8192.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 134549504.0,
+            "sampled_max": 134578176.0,
+            "last_minus_first": 208896.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 1600.0,
+            "sampled_max": 1606.0,
+            "last_minus_first": 7.0,
+            "last_quarter_median_minus_first_quarter": -2.0
+          },
+          "gdi_objects": {
+            "available_samples": 0,
+            "median": null,
+            "sampled_max": null,
+            "last_minus_first": null,
+            "last_quarter_median_minus_first_quarter": null
+          },
+          "user_objects": {
+            "available_samples": 0,
+            "median": null,
+            "sampled_max": null,
+            "last_minus_first": null,
+            "last_quarter_median_minus_first_quarter": null
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null,
+          "separate_observer_cpu": {
+            "cpu_one_core_percent": 4.348703238191261,
+            "method": "linear interpolation of cumulative DWM CPU at common QPC endpoints; observer gaps <=6s"
+          }
+        },
+        "shell": {
+          "pid": "8284",
+          "process": "explorer",
+          "role": "shell",
+          "samples": 62,
+          "duration_seconds": 305.0086661,
+          "errors": {},
+          "cpu_one_core_percent": 0.11782452105219052,
+          "cpu_normalized_percent": 0.05891226052609526,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 27779072.0,
+            "sampled_max": 30724096.0,
+            "last_minus_first": -2953216.0,
+            "last_quarter_median_minus_first_quarter": -1396736.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 135282688.0,
+            "sampled_max": 139010048.0,
+            "last_minus_first": -1818624.0,
+            "last_quarter_median_minus_first_quarter": -983040.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 2076.5,
+            "sampled_max": 2134.0,
+            "last_minus_first": -55.0,
+            "last_quarter_median_minus_first_quarter": -48.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 170.0,
+            "sampled_max": 170.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 207.0,
+            "sampled_max": 228.0,
+            "last_minus_first": -24.0,
+            "last_quarter_median_minus_first_quarter": -7.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        },
+        "target": {
+          "pid": "8812",
+          "process": "TranslucentTB",
+          "role": "target",
+          "samples": 62,
+          "duration_seconds": 305.0086661,
+          "errors": {},
+          "cpu_one_core_percent": 0.11270171578905179,
+          "cpu_normalized_percent": 0.056350857894525895,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 10018816.0,
+            "sampled_max": 10035200.0,
+            "last_minus_first": -16384.0,
+            "last_quarter_median_minus_first_quarter": -16384.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 13688832.0,
+            "sampled_max": 54239232.0,
+            "last_minus_first": -42332160.0,
+            "last_quarter_median_minus_first_quarter": -26828800.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 505.0,
+            "sampled_max": 509.0,
+            "last_minus_first": -4.0,
+            "last_quarter_median_minus_first_quarter": -4.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 22.0,
+            "sampled_max": 22.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 35.0,
+            "sampled_max": 35.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "dynamic_samples_per_second": 1.9933859839925379,
+          "dynamic_changes_per_second": 0.49834649599813446,
+          "dynamic_applications_per_second": 0.49834649599813446,
+          "captured_frames_per_second": 1.9933859839925379,
+          "capture_timeouts_per_second": 0.0,
+          "capture_failures_per_second": 0.0,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        },
+        "workload": {
+          "pid": "4596",
+          "process": "powershell",
+          "role": "workload",
+          "samples": 62,
+          "duration_seconds": 305.0086661,
+          "errors": {},
+          "cpu_one_core_percent": 5.927085689451497,
+          "cpu_normalized_percent": 2.9635428447257484,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 68722688.0,
+            "sampled_max": 72626176.0,
+            "last_minus_first": -28672.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 22200320.0,
+            "sampled_max": 24444928.0,
+            "last_minus_first": -831488.0,
+            "last_quarter_median_minus_first_quarter": -593920.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 625.0,
+            "sampled_max": 625.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 21.0,
+            "sampled_max": 22.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 28.0,
+            "sampled_max": 28.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": 20.989567548553005,
+          "fixture_paints_per_second": 21.49119263991955
+        },
+        "harness": {
+          "pid": "9136",
+          "process": "powershell",
+          "role": "harness",
+          "samples": 62,
+          "duration_seconds": 305.0086661,
+          "errors": {},
+          "cpu_one_core_percent": 0.0,
+          "cpu_normalized_percent": 0.0,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 76824576.0,
+            "sampled_max": 76865536.0,
+            "last_minus_first": -28672.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 7301120.0,
+            "sampled_max": 23117824.0,
+            "last_minus_first": -18276352.0,
+            "last_quarter_median_minus_first_quarter": -13336576.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 626.0,
+            "sampled_max": 631.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 0.0,
+            "sampled_max": 0.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 4.0,
+            "sampled_max": 4.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        },
+        "observer": {
+          "pid": "4880",
+          "process": "powershell",
+          "role": "observer",
+          "samples": 62,
+          "duration_seconds": 305.0086661,
+          "errors": {},
+          "cpu_one_core_percent": 0.7428067631551141,
+          "cpu_normalized_percent": 0.37140338157755703,
+          "private_bytes": {
+            "available_samples": 62,
+            "median": 78557184.0,
+            "sampled_max": 95268864.0,
+            "last_minus_first": 10911744.0,
+            "last_quarter_median_minus_first_quarter": 5595136.0
+          },
+          "working_set_bytes": {
+            "available_samples": 62,
+            "median": 55640064.0,
+            "sampled_max": 109809664.0,
+            "last_minus_first": -46424064.0,
+            "last_quarter_median_minus_first_quarter": -43233280.0
+          },
+          "handles": {
+            "available_samples": 62,
+            "median": 600.0,
+            "sampled_max": 607.0,
+            "last_minus_first": 12.0,
+            "last_quarter_median_minus_first_quarter": 3.0
+          },
+          "gdi_objects": {
+            "available_samples": 62,
+            "median": 0.0,
+            "sampled_max": 0.0,
+            "last_minus_first": 0.0,
+            "last_quarter_median_minus_first_quarter": 0.0
+          },
+          "user_objects": {
+            "available_samples": 62,
+            "median": 4.0,
+            "sampled_max": 5.0,
+            "last_minus_first": 1.0,
+            "last_quarter_median_minus_first_quarter": 1.0
+          },
+          "dynamic_samples_per_second": null,
+          "dynamic_changes_per_second": null,
+          "dynamic_applications_per_second": null,
+          "captured_frames_per_second": null,
+          "capture_timeouts_per_second": null,
+          "capture_failures_per_second": null,
+          "fixture_animation_ticks_per_second": null,
+          "fixture_paints_per_second": null
+        }
+      }
+    }
+  },
+  "phase_checks": [
+    {
+      "phase": "Right-Changing-r1-p0-baseline",
+      "gpu_batches": 62,
+      "workload_callbacks_per_second": 20.967236398698255,
+      "receipt": {
+        "label": "Right-Changing-r1-p0-baseline",
+        "diagnostic_only": false,
+        "commit": "7d644774045429a98c07678df553b771e3b5d129",
+        "executable_sha256": "c61a8abcb3c21550090ae94326b7dde66a4428f059bbf9fc786720d5a35a0700",
+        "pid": 6576,
+        "start_qpc": 395999008697,
+        "qpc_frequency": 10000000,
+        "warmup_seconds": 120,
+        "duration_seconds": 305,
+        "gpu_enabled": true,
+        "fixture_sha256": "0ab53de60a4174de8c1f73147cfb7f408506eec79709bbcf8ddda49a481767f0",
+        "fixture_animation_interval_ms": 33,
+        "fixture_color_interval_ms": 2000,
+        "scheduler_enabled": false,
+        "end_qpc": 400266576890
+      }
+    },
+    {
+      "phase": "Right-Changing-r1-p1-gdi",
+      "gpu_batches": 62,
+      "workload_callbacks_per_second": 20.97685281635254,
+      "receipt": {
+        "label": "Right-Changing-r1-p1-gdi",
+        "diagnostic_only": false,
+        "commit": "e4f09c8af0795a86dad562dfbea3c6225f9d9a2c",
+        "executable_sha256": "1c6e5bc37ea2c777df703580a9e8778a0b9fc4654ecb6935fb8b3530f2dc1e56",
+        "pid": 6612,
+        "start_qpc": 400382478762,
+        "qpc_frequency": 10000000,
+        "warmup_seconds": 120,
+        "duration_seconds": 305,
+        "gpu_enabled": true,
+        "fixture_sha256": "0ab53de60a4174de8c1f73147cfb7f408506eec79709bbcf8ddda49a481767f0",
+        "fixture_animation_interval_ms": 33,
+        "fixture_color_interval_ms": 2000,
+        "scheduler_enabled": false,
+        "end_qpc": 404649861691
+      }
+    },
+    {
+      "phase": "Right-Changing-r1-p2-baseline",
+      "gpu_batches": 62,
+      "workload_callbacks_per_second": 20.97038094903212,
+      "receipt": {
+        "label": "Right-Changing-r1-p2-baseline",
+        "diagnostic_only": false,
+        "commit": "7d644774045429a98c07678df553b771e3b5d129",
+        "executable_sha256": "c61a8abcb3c21550090ae94326b7dde66a4428f059bbf9fc786720d5a35a0700",
+        "pid": 6828,
+        "start_qpc": 404757174602,
+        "qpc_frequency": 10000000,
+        "warmup_seconds": 120,
+        "duration_seconds": 305,
+        "gpu_enabled": true,
+        "fixture_sha256": "0ab53de60a4174de8c1f73147cfb7f408506eec79709bbcf8ddda49a481767f0",
+        "fixture_animation_interval_ms": 33,
+        "fixture_color_interval_ms": 2000,
+        "scheduler_enabled": false,
+        "end_qpc": 409023067285
+      }
+    },
+    {
+      "phase": "Right-Changing-r1-p3-dxgi",
+      "gpu_batches": 62,
+      "workload_callbacks_per_second": 20.989567548553005,
+      "receipt": {
+        "label": "Right-Changing-r1-p3-dxgi",
+        "diagnostic_only": false,
+        "commit": "e4f09c8af0795a86dad562dfbea3c6225f9d9a2c",
+        "executable_sha256": "b1b2c69cb8bc46ffeb22ed5e61340519d46e211b595a3edca7900aaf284a4fcf",
+        "pid": 8812,
+        "start_qpc": 409132035473,
+        "qpc_frequency": 10000000,
+        "warmup_seconds": 120,
+        "duration_seconds": 305,
+        "gpu_enabled": true,
+        "fixture_sha256": "0ab53de60a4174de8c1f73147cfb7f408506eec79709bbcf8ddda49a481767f0",
+        "fixture_animation_interval_ms": 33,
+        "fixture_color_interval_ms": 2000,
+        "scheduler_enabled": false,
+        "end_qpc": 413396781636
+      }
+    },
+    {
+      "phase": "Right-Changing-r1-p4-baseline",
+      "gpu_batches": 62,
+      "workload_callbacks_per_second": 20.97675995551265,
+      "receipt": {
+        "label": "Right-Changing-r1-p4-baseline",
+        "diagnostic_only": false,
+        "commit": "7d644774045429a98c07678df553b771e3b5d129",
+        "executable_sha256": "c61a8abcb3c21550090ae94326b7dde66a4428f059bbf9fc786720d5a35a0700",
+        "pid": 6428,
+        "start_qpc": 413492582211,
+        "qpc_frequency": 10000000,
+        "warmup_seconds": 120,
+        "duration_seconds": 305,
+        "gpu_enabled": true,
+        "fixture_sha256": "0ab53de60a4174de8c1f73147cfb7f408506eec79709bbcf8ddda49a481767f0",
+        "fixture_animation_interval_ms": 33,
+        "fixture_color_interval_ms": 2000,
+        "scheduler_enabled": false,
+        "end_qpc": 417759278994
+      }
+    }
+  ],
+  "dwm_prefix_sha256": "51a37885d72ca038215fb22f3183319519bd65f218cf3739287f12f1210377ad",
+  "limits": [
+    "Only first of three repetitions; no backend selection or final budget assessment.",
+    "Combined CPU/private commit include target, Explorer, DWM; observers and synthetic fixture remain separate.",
+    "QPC timings; fixture callbacks are not displayed FPS.",
+    "GPU memory is separate from private commit; no physical pixel readback during timing."
+  ]
+}

@@ -6,16 +6,20 @@ Start opened, Search opened, Task View opened or Battery saver. Existing
 appearance selection and application rules determine which monitor needs it.
 In JSON, set `"accent": "dynamic"` on any supported appearance or rule.
 
-This is an experiment in progress. The native menu, bottom-taskbar color,
-configuration persistence and exit restoration were exercised on Windows 11
-26100.8875 with revision 3ea6890. Revision a6ad586 passes the six synthetic
-color/continuity cases on real left/right taskbars with both GDI and DXGI;
-a1b05b5 also passes the right cases and 30 focus-latency trials per backend. Classic
-taskbar glyph contrast still follows the system theme and fails on some dark
-backgrounds. See [validation status](dynamic-validation.md). Full integration
-coverage and the complete resource matrix remain pending. The first complete
-[right/static resource comparison](dynamic-resources.md) is available; a final
-backend choice and first-version delivery remain pending.
+GDI is selected for the first experimental release, using native revision
+`e4f09c8af0795a86dad562dfbea3c6225f9d9a2c`. Both candidate builds pass 83 native
+tests and 2,021 portable checks. Current real-taskbar tests retain one process
+through Bottom → Left → Right, with 36 exact-color checks and 30 Dynamic/Clear
+stages; inactive capture attempts/frames remain unchanged with timers stopped.
+See [validation status](dynamic-validation.md) for the exact revision of each
+additional integration check and the remaining final-package verification.
+
+The owner accepted existing [approximate resource results](dynamic-resources.md)
+as sufficient and closed further benchmarking. The incomplete extended matrix
+is not a release gate. Final package ordinary-use verification and downloadable
+publication remain pending. Classic taskbar glyphs still follow the system
+theme and can have poor contrast on dark backgrounds; this remains an explicit
+limitation, not an implemented contrast solution.
 
 ## Sampling and selection
 

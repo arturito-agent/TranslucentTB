@@ -1,8 +1,16 @@
 # Dynamic resource comparison
 
-One of nine position/workload combinations is complete. The first version,
-backend selection and remaining static/interaction/changing comparisons are
-still in progress. These results describe the existing Windows VM.
+GDI is selected for the first version using the existing approximate VM
+measurements. On 2026-10-21 the owner accepted this precision and requested no
+further resource measurements. The remaining matrix was intentionally stopped;
+it is not presented as a completed nine-condition comparison. Final package
+verification and publication are still pending.
+
+GDI uses roughly 9 MiB of application private commit in the observed static and
+changing phases. DXGI has lower static CPU, but higher observed system memory
+and substantially higher DWM CPU with changing content. This supports choosing
+the simpler GDI backend for this experimental VM release; it does not establish
+universal efficiency or measurements for every taskbar position/workload.
 
 ## Environment and method
 
@@ -48,10 +56,57 @@ invalid engine-rate batches remain explicitly unavailable.
 GDI exceeds the initial 0.1%-of-one-core static CPU reference in all three
 repetitions. DXGI's median is below it, but one repetition exceeds it. Both
 application-only private increments are below 1 MiB; DXGI's combined system
-increment extends above the initial 5 MiB memory reference. The remaining
-positions/workloads must inform the final backend choice.
+increment extends above the initial 5 MiB memory reference. The owner accepted these approximations alongside the changing-content evidence
+below to choose GDI, without extending the matrix.
+
+## Right taskbar, changing content — one complete repetition
+
+One complete five-phase repetition brackets GDI and DXGI with the original
+baseline. Each phase has 120 seconds warmup and 305 seconds measured. Pinned
+builds, full phase timing, real geometry/DPI, progressing fixture/capture/color
+counters, matched GPU scopes, separate DWM CPU and graceful exits were checked.
+The incomplete later repetition is not used for the table below.
+
+| Increment against baseline | GDI | DXGI |
+| --- | --- | --- |
+| Combined CPU, % of one core | about 0.15 | about 1.79 |
+| DWM CPU, % of one core | about 0.10 | about 1.60 |
+| Combined private commit, MiB | about -0.80 | about 3.80 |
+| Application private commit, MiB | about 0.17 | about 0.58 |
+
+Absolute application private-commit medians are about 9.14 MiB for GDI and
+9.55 MiB for DXGI; working sets are about 12.58 and 13.05 MiB. Negative bracketed
+memory differences reflect observed baseline/process variation, not negative
+allocations. These are single-repetition estimates, not a precision guarantee.
+DWM stayed elevated throughout the DXGI interval and returned near its preceding
+baseline afterward; diagnostic subintervals are not independent repetitions.
+
+## Interpretation and limits
+
+GDI exceeds the initial static CPU engineering reference of 0.1% of one core.
+The observed cost remains small in absolute VM terms, but the initial target
+must not be reported as passed. Application-only private-memory increments are
+below 1 MiB in the observed cases. Existing multi-position functional tests
+establish operation and movement; they do not establish per-position CPU/RAM.
+No new 60-minute formal stability result, full interaction matrix, physical-GPU
+energy result, or statistical latency claim is asserted.
 
 ## Reproduce the analysis
+
+The changing-content estimate is available as a [single-repetition comparison](dynamic-results/resource-right-changing-r1-e4f0.json)
+and [reviewed raw data](dynamic-results/resource-right-changing-r1-e4f0-data.zip)
+(SHA-256 `559d0ef6137266497aa763961970c02105664e6273ed5b20aaea48f08f155e74`). To reproduce its individual phase summaries:
+
+```sh
+python3 Tests/dynamic/summarize.py /path/to/data/Right-Changing-r1/*.csv --dwm-observer /path/to/data/dwm-right-changing-r1.csv
+```
+
+For each role, subtract the average of adjacent baseline phase summaries from
+the candidate (phases 1 and 3), then sum target, shell and compositor CPU/private
+commit. This is one complete repetition; the stricter full-suite comparator
+continues to require all fifteen phases and must not be used to label this data
+as a complete three-repeat suite.
+
 
 - [Complete comparison JSON](dynamic-results/resource-right-static-e4f0.json).
 - [Reviewed raw synthetic data](dynamic-results/resource-right-static-e4f0-data.zip),

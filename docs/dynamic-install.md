@@ -61,6 +61,6 @@ some Dynamic backgrounds; the modern XAML taskbar adapts its glyph theme. Color
 tests do not establish readability. See the validation report for recovery,
 display, scaling and other tested or unavailable combinations.
 
-Resource comparison, final backend selection and the final release package
-are still pending. Do not treat an intermediate CI artifact or successful
-functional check as a published low-resource result.
+GDI is selected using the existing approximate [resource comparison](dynamic-resources.md).
+Final package verification and publication are still pending. An intermediate
+CI artifact is not the final downloadable release.
