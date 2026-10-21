@@ -28,6 +28,10 @@ jobs:
         shell: powershell
         run: |
           & .\Tests\dynamic\fixture-check.ps1 -Output fixture-check.json
+      - name: Compile shell-state test helpers without desktop input
+        shell: powershell
+        run: |
+          & .\Tests\dynamic\states.ps1 -Case Start -Output unused-state-compile.csv -CompileOnly
       - name: Validate GPU summary accounting
         shell: pwsh
         run: |

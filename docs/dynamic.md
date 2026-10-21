@@ -163,6 +163,16 @@ Every CSV batch records physical taskbar bounds, edge and DPI. A phase with a
 different edge, paused/stopped sampling, failed captures or incorrect static
 reference color is rejected. `states.ps1` checks the documented state/rule
 configurations, including fallback use on unreliable native window frames.
+Its Start/Search/TaskView cases use real Windows shortcuts to alternate the
+actual shell view open/closed, with Desktop Clear and only that view's Dynamic
+override enabled. Pass the known application PID with `-ExpectedProcessId`;
+the test verifies worker ownership and protocol before sending input, requires
+its own fixture to be foreground before opening a view, and closes an owned
+requested view on cleanup. It records sampler progress, foreground window class
+and the real taskbar pixel. Run these cases only in the unlocked interactive
+session outside measured resource intervals. `-CompileOnly` checks the native
+helper/INPUT layout without sending input; it does not establish live shell
+integration. The first local VM execution of these new cases is still pending.
 
 The collector includes a final endpoint, checks an optional target PID, keeps
 the observer's costs separate, and leaves unavailable metrics empty with an

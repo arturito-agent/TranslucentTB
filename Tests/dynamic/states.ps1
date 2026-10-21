@@ -1,20 +1,31 @@
 param(
     [Parameter(Mandatory=$true)][string] $Output,
-    [Parameter(Mandatory=$true)][ValidateSet('MaximizedClear','TitleRule')][string] $Case
+    [Parameter(Mandatory=$true)][ValidateSet('MaximizedClear','TitleRule','Start','Search','TaskView')][string] $Case,
+    [int] $ExpectedProcessId = 0,
+    [switch] $CompileOnly
 )
 $ErrorActionPreference='Stop'
 if(Test-Path -LiteralPath $Output){throw 'Choose a new output file'}
 . (Join-Path $PSScriptRoot 'fixture.ps1') -DefineOnly
-[DynamicFixture]::PrepareDisplay($true)
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 public static class DynamicStateTest {
     [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left,Top,Right,Bottom; }
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr FindWindow(string c,string n);
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string n);
     [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr w,uint m,UIntPtr p,IntPtr l,uint f,uint t,out UIntPtr r);
     [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr w);
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr w,out uint pid);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr w,StringBuilder name,int count);
+    [StructLayout(LayoutKind.Sequential)] struct Keyboard { public ushort Key,Scan;public uint Flags,Time;public UIntPtr Extra; }
+    [StructLayout(LayoutKind.Sequential)] struct Mouse { public int X,Y;public uint Data,Flags,Time;public UIntPtr Extra; }
+    [StructLayout(LayoutKind.Explicit)] struct Payload { [FieldOffset(0)] public Keyboard Keyboard;[FieldOffset(0)] public Mouse Mouse; }
+    [StructLayout(LayoutKind.Sequential)] struct Input { public uint Type;public Payload Data; }
+    [DllImport("user32.dll",SetLastError=true)] static extern uint SendInput(uint count,Input[] input,int size);
+    public static int InputSize() { return Marshal.SizeOf(typeof(Input)); }
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr w,out Rect r);
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr w);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr w,IntPtr dc);
@@ -33,15 +44,49 @@ public static class DynamicStateTest {
         if(w==IntPtr.Zero || SendMessageTimeout(w,RegisterWindowMessage("TTB_QueryDynamicStats"),(UIntPtr)field,IntPtr.Zero,2,1000,out r)==IntPtr.Zero) throw new InvalidOperationException("Worker unavailable");
         return r.ToUInt64();
     }
+    public static bool OwnsWorker(uint expectedPid) {
+        IntPtr w=FindWindow("TTB_WorkerWindow","TTB_WorkerWindow");uint pid;
+        GetWindowThreadProcessId(w,out pid);return w!=IntPtr.Zero && pid==expectedPid;
+    }
+    public static string ForegroundClass() {
+        var name=new StringBuilder(256);GetClassName(GetForegroundWindow(),name,name.Capacity);return name.ToString();
+    }
+    static void Key(ushort key,bool up) {
+        var input=new Input {Type=1,Data=new Payload {Keyboard=new Keyboard {Key=key,Flags=up?2u:0u}}};
+        if(SendInput(1,new Input[]{input},Marshal.SizeOf(typeof(Input)))!=1)throw new InvalidOperationException("Synthetic test key was not accepted");
+    }
+    public static void OpenShell(string state,IntPtr fixture) {
+        if(GetForegroundWindow()!=fixture)throw new InvalidOperationException("Fixture must be foreground before shell input");
+        ushort key=state=="Search"?(ushort)0x53:state=="TaskView"?(ushort)0x09:(ushort)0;
+        try { Key(0x5b,false);if(key!=0)Key(key,false); }
+        finally { if(key!=0)Key(key,true);Key(0x5b,true); }
+    }
+    public static void CloseShell() {
+        try { Key(0x1b,false); } finally { Key(0x1b,true); }
+    }
 }
 '@
+if($CompileOnly){
+    $expectedSize=if([IntPtr]::Size -eq 8){40}else{28}
+    if([DynamicStateTest]::InputSize() -ne $expectedSize){throw 'Incorrect native INPUT layout'}
+    Write-Output 'Shell-state helper compiled; native INPUT layout verified; no desktop input sent.'
+    return
+}
+$shellCase=$Case -in @('Start','Search','TaskView')
+if($shellCase -and ($ExpectedProcessId -le 0 -or -not [DynamicStateTest]::OwnsWorker($ExpectedProcessId) -or [DynamicStateTest]::Read(255) -ne 0x44594E01)) { throw 'Shell cases require the owned Dynamic worker PID and protocol' }
+[DynamicFixture]::PrepareDisplay($true)
 # Configure the candidate before launching this script:
 # MaximizedClear: Desktop Dynamic, Visible disabled, Maximized Clear enabled.
 # TitleRule: Desktop Clear, Visible Clear enabled, title rule "Dynamic rule match"
 # using Dynamic. Other optional state overrides must be disabled for both cases.
 # Use the known Dynamic fallback #203040FF for this integration fixture.
+# Start/Search/TaskView: Desktop Clear; only the named shell appearance enabled
+# with Dynamic and fallback #203040FF. Other overrides disabled. Run outside
+# resource measurements, on an awake/unlocked console. These cases use real
+# shell keyboard shortcuts, never registered-message state injection.
 $stages=@($true,$false,$true,$false,$true)
 $script:stage=0;$script:started=$false;$script:baseline=$null;$script:failure=$null
+$script:shellWasRequested=$false
 $script:rows=New-Object 'System.Collections.Generic.List[object]'
 $form=New-Object DynamicFixture -ArgumentList 'Uniform',$false
 $form.FormBorderStyle=[System.Windows.Forms.FormBorderStyle]::Sizable
@@ -50,15 +95,27 @@ $timer=New-Object System.Windows.Forms.Timer
 $timer.Interval=100
 $timer.Add_Tick({
     try {
+        if($shellCase -and -not [DynamicStateTest]::OwnsWorker($ExpectedProcessId)){throw 'Worker ownership changed'}
         if(-not $script:started) {
             $dynamic=$stages[$script:stage]
             if($Case -eq 'MaximizedClear') {
                 $form.Text='Dynamic maximize fixture'
                 $form.WindowState=if($dynamic){[System.Windows.Forms.FormWindowState]::Normal}else{[System.Windows.Forms.FormWindowState]::Maximized}
-            } else {
+            } elseif($Case -eq 'TitleRule') {
                 $form.Text=if($dynamic){'Dynamic rule match'}else{'Unmatched synthetic window'}
+            } else {
+                $form.Text='Dynamic shell-state fixture'
+                if($dynamic) {
+                    if([DynamicStateTest]::Read(5) -ne 0){throw 'Expected Clear before opening the shell view'}
+                    $form.Activate()
+                    [DynamicStateTest]::OpenShell($Case,$form.Handle)
+                    $script:shellWasRequested=$true
+                } else {
+                    [DynamicStateTest]::CloseShell()
+                    $script:shellWasRequested=$false
+                }
             }
-            $form.Activate()
+            if(-not $shellCase){$form.Activate()}
             $clock.Restart();$script:started=$true;$script:baseline=$null
             return
         }
@@ -75,7 +132,7 @@ $timer.Add_Tick({
         # legitimately uses the known fallback until the first confirmed color.
         $passed=if($dynamic){$active -eq 1 -and $samples -gt $script:baseline -and $pixel -eq $expectedRgb}else{$active -eq 0 -and $samples -eq $script:baseline}
         if($Case -eq 'MaximizedClear'){$passed=$passed -and ($isMaximized -eq (-not $dynamic))}
-        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;maximized=$isMaximized;title=$form.Text;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
+        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;maximized=$isMaximized;title=$form.Text;foreground_class=[DynamicStateTest]::ForegroundClass();expected_worker_pid=$ExpectedProcessId;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
         $script:rows | Export-Csv -LiteralPath $Output -Encoding UTF8 -NoTypeInformation
         $script:stage++;$script:started=$false
         if($script:stage -ge $stages.Count){$form.Close()}
@@ -83,6 +140,10 @@ $timer.Add_Tick({
 })
 $timer.Start()
 try{[System.Windows.Forms.Application]::Run($form)}
-finally{$timer.Dispose();$form.Dispose();[DynamicFixture]::ReleaseDisplay()}
+finally{
+    $timer.Dispose()
+    try {if($script:shellWasRequested){[DynamicStateTest]::CloseShell()}}
+    finally {$form.Dispose();[DynamicFixture]::ReleaseDisplay()}
+}
 if($script:failure){throw $script:failure}
 if($script:rows.Count -ne $stages.Count -or @($script:rows|Where-Object{-not $_.passed}).Count){throw 'State transitions failed; inspect CSV'}
