@@ -166,8 +166,10 @@ and the alternating three-repeat order. It subtracts the arithmetic mean of
 the adjacent baselines from each candidate, preserves negative differences and
 reports repetition values, medians and ranges. Combined CPU includes the app,
 Explorer, DWM and the optional taskbar helper; observer and workload costs stay
-separate. Missing CPU remains unknown. Target private-memory medians are compared
-without adding shared working sets. Bracketing estimates incremental cost; it
+separate. Missing CPU remains unknown. Private-memory median differences are
+reported for the app and each affected process, plus their combined private
+commit; this does not sum shared working sets or measure GPU allocations.
+Bracketing estimates incremental cost; it
 does not establish causation or a statistical confidence interval.
 
 The worker accepts the registered read-only message `TTB_QueryDynamicStats`.

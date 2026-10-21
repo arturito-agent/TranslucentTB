@@ -92,11 +92,16 @@ def compare(directory, auxiliary):
             if any("taskbar-helper" in item for item in (candidate, before, after)):
                 deltas["taskbar-helper"] = subtract_bracket(*(item["taskbar-helper"]["cpu_one_core_percent"] if "taskbar-helper" in item else 0 for item in (candidate, before, after)))
             total = None if any(value is None for value in deltas.values()) else sum(deltas.values())
-            private = [item["target"]["private_bytes"]["median"] for item in (candidate, before, after)]
-            private_delta = subtract_bracket(*private)
+            private_deltas = {}
+            for role in deltas:
+                values = [item[role]["private_bytes"]["median"] if role in item else 0 for item in (candidate, before, after)]
+                difference = subtract_bracket(*values)
+                private_deltas[role] = None if difference is None else difference / 1048576
+            private_total = None if any(value is None for value in private_deltas.values()) else sum(private_deltas.values())
             comparisons.append({"repeat": repeat, "backend": backend, "candidate_phase": phase,
                                 "cpu_delta_one_core_percent": deltas, "combined_cpu_delta_one_core_percent": total,
-                                "target_private_delta_mib": None if private_delta is None else private_delta / 1048576,
+                                "target_private_delta_mib": private_deltas["target"],
+                                "private_delta_mib": private_deltas, "combined_private_delta_mib": private_total,
                                 "absolute_roles": candidate})
     aggregates = {}
     for backend in ("gdi", "dxgi"):
@@ -104,13 +109,16 @@ def compare(directory, auxiliary):
         aggregates[backend] = {
             "combined_cpu_delta_one_core_percent": describe([item["combined_cpu_delta_one_core_percent"] for item in items]),
             "target_private_delta_mib": describe([item["target_private_delta_mib"] for item in items]),
+            "combined_private_delta_mib": describe([item["combined_private_delta_mib"] for item in items]),
+            "private_delta_mib": {role: describe([item["private_delta_mib"].get(role, 0) for item in items])
+                                  for role in sorted(set().union(*(item["private_delta_mib"] for item in items)))},
             "cpu_delta_one_core_percent": {role: describe([item["cpu_delta_one_core_percent"].get(role, 0) for item in items])
                                             for role in sorted(set().union(*(item["cpu_delta_one_core_percent"] for item in items)))}}
     return {"position": setting[0], "workload": setting[1], "repetitions": 3,
             "method": "candidate minus arithmetic mean of adjacent baselines; CPU in percent of one logical core",
             "limits": ["A bracketed difference estimates incremental cost; it is not a causal guarantee or confidence interval.",
                        "Combined CPU includes target, Explorer, DWM and a taskbar helper when present; workload, harness and observers remain separate.",
-                       "Private memory delta uses target medians only; shared working sets are not summed.",
+                       "Private-memory differences use each process's phase median; combined private commit excludes shared working sets and is not a measurement of GPU allocations.",
                        "Ranges show three repetition results; negative differences are retained, not clamped."],
             "aggregates": aggregates, "comparisons": comparisons}
 
