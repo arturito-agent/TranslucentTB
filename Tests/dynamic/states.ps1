@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 public static class DynamicStateTest {
     [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left,Top,Right,Bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct MonitorInfo {public uint Size;public Rect Monitor,Work;public uint Flags;}
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr FindWindow(string c,string n);
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string n);
     [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr w,uint m,UIntPtr p,IntPtr l,uint f,uint t,out UIntPtr r);
@@ -27,6 +28,8 @@ public static class DynamicStateTest {
     [DllImport("user32.dll",SetLastError=true)] static extern uint SendInput(uint count,Input[] input,int size);
     public static int InputSize() { return Marshal.SizeOf(typeof(Input)); }
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr w,out Rect r);
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr w,uint flags);
+    [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m,ref MonitorInfo info);
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr w);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr w,IntPtr dc);
     [DllImport("gdi32.dll")] static extern uint GetPixel(IntPtr dc,int x,int y);
@@ -35,8 +38,25 @@ public static class DynamicStateTest {
         if(!GetWindowRect(FindWindow("Shell_TrayWnd",null),out r)) throw new InvalidOperationException("No real taskbar");
         bool vertical=r.Bottom-r.Top>r.Right-r.Left;
         int x=vertical?(r.Left+r.Right)/2:r.Left+10,y=vertical?r.Top+10:(r.Top+r.Bottom)/2;
+        return PixelAt(x,y);
+    }
+    public static uint ReferencePixel() {
+        IntPtr bar=FindWindow("Shell_TrayWnd",null);Rect r;
+        MonitorInfo info=new MonitorInfo();info.Size=(uint)Marshal.SizeOf(typeof(MonitorInfo));
+        if(!GetWindowRect(bar,out r) || !GetMonitorInfo(MonitorFromWindow(bar,2),ref info))throw new InvalidOperationException("No taskbar monitor");
+        bool vertical=r.Bottom-r.Top>r.Right-r.Left;
+        int x=vertical?(r.Left-info.Monitor.Left<info.Monitor.Right-r.Right?r.Right+4:r.Left-4):(info.Monitor.Left+info.Monitor.Right)/2;
+        int y=vertical?(info.Monitor.Top+info.Monitor.Bottom)/2:r.Top-4;
+        return PixelAt(x,y);
+    }
+    static uint PixelAt(int x,int y) {
         IntPtr dc=GetDC(IntPtr.Zero);
-        try { uint bgr=GetPixel(dc,x,y);return ((bgr&255)<<16)|(bgr&0xff00)|((bgr>>16)&255); }
+        if(dc==IntPtr.Zero)throw new InvalidOperationException("No desktop DC");
+        try {
+            uint bgr=GetPixel(dc,x,y);
+            if(bgr==0xffffffff)throw new InvalidOperationException("Desktop pixel read failed");
+            return ((bgr&255)<<16)|(bgr&0xff00)|((bgr>>16)&255);
+        }
         finally { ReleaseDC(IntPtr.Zero,dc); }
     }
     public static ulong Read(uint field) {
@@ -50,6 +70,9 @@ public static class DynamicStateTest {
     }
     public static string ForegroundClass() {
         var name=new StringBuilder(256);GetClassName(GetForegroundWindow(),name,name.Capacity);return name.ToString();
+    }
+    public static uint ForegroundPid() {
+        uint pid;GetWindowThreadProcessId(GetForegroundWindow(),out pid);return pid;
     }
     static void Key(ushort key,bool up) {
         var input=new Input {Type=1,Data=new Payload {Keyboard=new Keyboard {Key=key,Flags=up?2u:0u}}};
@@ -132,7 +155,7 @@ $timer.Add_Tick({
         # legitimately uses the known fallback until the first confirmed color.
         $passed=if($dynamic){$active -eq 1 -and $samples -gt $script:baseline -and $pixel -eq $expectedRgb}else{$active -eq 0 -and $samples -eq $script:baseline}
         if($Case -eq 'MaximizedClear'){$passed=$passed -and ($isMaximized -eq (-not $dynamic))}
-        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;maximized=$isMaximized;title=$form.Text;foreground_class=[DynamicStateTest]::ForegroundClass();expected_worker_pid=$ExpectedProcessId;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
+        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;maximized=$isMaximized;title=$form.Text;foreground_class=[DynamicStateTest]::ForegroundClass();foreground_pid=[DynamicStateTest]::ForegroundPid();expected_worker_pid=$ExpectedProcessId;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
         $script:rows | Export-Csv -LiteralPath $Output -Encoding UTF8 -NoTypeInformation
         $script:stage++;$script:started=$false
         if($script:stage -ge $stages.Count){$form.Close()}

@@ -145,6 +145,32 @@ decoded adjacent strip, not the encoder's input palette. These browser checks
 are separate from the resource suite and do not themselves establish latency
 percentiles or resource budgets. Record failures and actual taskbar geometry.
 
+For repeatable browser inspection, attach Playwright CLI to that owned Edge
+instance through a private CDP transport and an isolated fixture profile. Keep
+CLI artifacts under ignored `local-files/` using its `outputDir` configuration.
+`browser-state.js` is a read-only `run-code --filename` helper: it refuses other
+page titles/URLs and reports focus, scroll position, edge CSS, playback progress,
+decoded/dropped frame counters and an optional decoded center pixel. Example,
+after preparing the endpoint and local output configuration:
+
+```sh
+playwright-cli -s=ttb-dynamic-browser attach --cdp="$TTB_CDP_ENDPOINT" --config=local-files/browser-cli.json
+playwright-cli -s=ttb-dynamic-browser --raw run-code --filename=Tests/dynamic/browser-state.js
+playwright-cli -s=ttb-dynamic-browser detach
+```
+
+Use the page's actual Scroll/Change theme/Play video buttons between observations.
+If canvas readback is unavailable, the helper preserves its error; keep browser
+security settings intact. Pair these DOM observations with the real desktop
+reference and taskbar pixels. `DynamicStateTest.ReferencePixel()` samples the
+middle of the adjacent strip for uniform browser scenes, while `TaskbarPixel()`
+reads the real bar. Both require physical-pixel DPI context; the helper is defined
+by `states.ps1 -CompileOnly`. A single reference point is not an oracle for
+arbitrary segmented content; use the separate continuity cases for that.
+Browser wall-clock timestamps can correlate functional observations in the guest;
+its page-relative performance clock is not Windows QPC. This workflow still
+awaits its first real Windows 11 browser execution after the active resource run.
+
 `functional.ps1` verifies six scenes against both the worker's chosen RGB and
 the actual taskbar pixel. `latency.ps1` measures internal-content or foreground
 switches with a 50ms polling observer; run it separately from resource trials.
