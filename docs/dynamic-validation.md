@@ -131,11 +131,23 @@ this few-window fixture and records the exact point/window class; the color
 assertion remains exact. The revised helper compiles in the actual Windows VM;
 all five revised GDI Start stages now pass, probing `MSTaskListWClass` at
 (1249,400), with three active Dynamic stages and two stopped Clear stages.
-The full positive state matrix is still running. The
+The full positive state matrix described below subsequently passes. The
 [failed leading-edge probe](dynamic-results/states-right-gdi-753a-start-button-probe.csv)
 and [point diagnostic](dynamic-results/start-pixel-gdi-753a.json) remain available.
 The [positive GDI Start receipt](dynamic-results/states-right-gdi-Start-753a.csv)
 records the corrected point and exact assertion.
+
+All ten current right-taskbar state cases now pass: Maximized Clear, title
+rules, Start, Search and Task View, with both GDI and DXGI. Each records five
+alternating stages: three Dynamic stages with advancing attempts and the exact
+expected background pixel, and two Clear stages with a stopped timer and no
+attempts during the observation window. Shell cases use actual keyboard
+shortcuts, record foreground identity and verify the expected worker PID.
+All ten app exits are graceful; the driver and its children finish and test
+configuration is restored. The [matrix receipt](dynamic-results/states-right-753a.json)
+pins the native revision and state helper hash. This verifies these cases on
+the real right classic taskbar at 100%; it does not establish all menus,
+battery saver, all rule forms, other positions or resource use.
 
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests

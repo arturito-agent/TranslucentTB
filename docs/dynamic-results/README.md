@@ -98,3 +98,10 @@ hits the pressed Start button, while the fixed middle background point shows
 the exact expected RGB. The updated state harness records probe coordinates
 and window class and keeps the same exact color criterion. This diagnostic
 does not by itself establish the full positive state matrix.
+
+`states-right-753a.json` now binds all ten positive cases and the executed helper
+hash: five state cases per backend, each with five alternating stages. The
+`states-right-{gdi,dxgi}-{case}-753a.csv` files record exact background pixels,
+sampler behavior, probe coordinates/class and foreground identity. This is
+classic right-taskbar integration evidence at 100%, not complete menu/battery
+saver/rule-form coverage or a resource measurement.

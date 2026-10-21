@@ -1,0 +1,96 @@
+{
+  "commit": "753ad89ab3492098316a3015bbfc0a4539f415ba",
+  "state_helper_canonical_sha256": "5f016402b6ee32f523474a8e2d2d7c3029e08eb0ae1fdb82bd221e2f88be1ccb",
+  "diagnostic_only": true,
+  "position": "Right",
+  "scale_percent": 100,
+  "taskbar_probe": [
+    1249,
+    400
+  ],
+  "explorer_settle_seconds": 35,
+  "results": [
+    {
+      "backend": "gdi",
+      "case": "MaximizedClear",
+      "pid": 7824,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "gdi",
+      "case": "TitleRule",
+      "pid": 2980,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "gdi",
+      "case": "Start",
+      "pid": 7988,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "gdi",
+      "case": "Search",
+      "pid": 1308,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "gdi",
+      "case": "TaskView",
+      "pid": 7272,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "dxgi",
+      "case": "MaximizedClear",
+      "pid": 8464,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "dxgi",
+      "case": "TitleRule",
+      "pid": 2316,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "dxgi",
+      "case": "Start",
+      "pid": 7772,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "dxgi",
+      "case": "Search",
+      "pid": 5372,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    },
+    {
+      "backend": "dxgi",
+      "case": "TaskView",
+      "pid": 5964,
+      "stages": 5,
+      "passed": true,
+      "exit_verified": true
+    }
+  ],
+  "passed": true,
+  "resource_budget_claim": false
+}
