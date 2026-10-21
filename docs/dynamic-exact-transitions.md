@@ -136,3 +136,19 @@ three-read bursts, two-second ordinary-content cooldown, and inactive hook/timer
 cleanup. Do not add a permanent fallback timer and still describe it as a purely
 event-driven mode. A universal content-change detector would need a separate
 cost/coverage decision; it is outside this release.
+
+## Published package
+
+[v0.3.0 experimental release](https://github.com/arturito-agent/TranslucentTB/releases/tag/dynamic-v0.3.0)
+contains the tested x64 GDI runtime and documentation pinned to
+`c0e4178e218ecbe7c9ec516cf2b349f2649c0412`. The final ZIP was extracted in Windows,
+all 111 manifest entries matched, and its first launch contained no settings.
+Welcome/Continue, Maximized window Enabled and Dynamic v2 selection through the
+actual menu passed. Tray Exit saved those settings; restart retained them and
+a maximized reference produced physical and internal #F9F6F3 with both capture
+and animation timers stopped after settling. The owned application exited normally.
+
+The published ZIP was downloaded without authentication and matched the exact
+Windows-tested archive. SHA-256:
+`cd5dbae6ca7d4e5212a2fa84f87fc9ebd1d8a7a9d91aab4e721b9b85be34310a`.
+This receipt updates the repository report; it does not rebuild that ZIP.
