@@ -13,7 +13,9 @@ color/continuity cases on real left/right taskbars with both GDI and DXGI;
 a1b05b5 also passes the right cases and 30 focus-latency trials per backend. Classic
 taskbar glyph contrast still follows the system theme and fails on some dark
 backgrounds. See [validation status](dynamic-validation.md). Full integration
-coverage and benchmarks remain pending. No performance result is claimed.
+coverage and the complete resource matrix remain pending. The first complete
+[right/static resource comparison](dynamic-resources.md) is available; a final
+backend choice and first-version delivery remain pending.
 
 ## Sampling and selection
 
