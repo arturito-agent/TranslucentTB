@@ -65,6 +65,18 @@ Latest source adds opt-in scalar scheduler snapshots to distinguish missing
 taskbars, temporary suppression, configuration changes and timer creation
 failures in the next diagnostic. It is instrumentation, not a new fix.
 
+Both51b47c3 builds pass83native tests and2021portable checks. The first90second
+GDI VM observation with scheduler diagnostics remains active throughout and
+reports no stops or timer creation failures. A second observation includes a
+bounded controlled composition-refresh/policy-recompute overlap:79refresh calls,
+296synthetic unlock notifications, no IPC errors, and64regular-timer stops with
+attribute-suppression context bit4. It finishes active. The
+[negative control](dynamic-results/policy-recompute-gdi-51b4-negative-r1.json)
+demonstrates transient teardown, not the spontaneous permanent stop or an actual
+session unlock. Latest source now separates shutdown from temporary reply
+suppression so that recomputation keeps the active sampler's resources. The
+new positive regression/builds and subsequent long-series behavior remain pending.
+
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests
 and an actual short collector/summary on a hosted Windows Server2025 runner.

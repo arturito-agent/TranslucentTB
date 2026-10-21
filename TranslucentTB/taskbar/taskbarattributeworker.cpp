@@ -748,7 +748,8 @@ std::uint32_t TaskbarAttributeWorker::DynamicSchedulerFlags() const noexcept
 	return (m_DynamicLocked ? 1u : 0u) | (m_DynamicDisplayOff ? 2u : 0u) |
 		(m_disableAttributeRefreshReply ? 4u : 0u) | (m_ResettingState ? 8u : 0u) |
 		(m_DynamicSampling ? 16u : 0u) | (m_Taskbars.empty() ? 32u : 0u) |
-		(m_ConfigManager.GetConfig().DesktopAppearance.Accent != AppearanceAccent::Dynamic ? 64u : 0u);
+		(m_ConfigManager.GetConfig().DesktopAppearance.Accent != AppearanceAccent::Dynamic ? 64u : 0u) |
+		(m_DynamicStopping ? 128u : 0u);
 }
 
 void TaskbarAttributeWorker::UpdateDynamicTimer()
@@ -757,7 +758,9 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 	bool needed = false;
 	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
-		const bool active = !m_DynamicLocked && !m_DynamicDisplayOff && !m_disableAttributeRefreshReply &&
+		// Suppressing replies during a composition refresh is transient. Keep the
+		// timer and capture resources; SampleDynamic skips that critical section.
+		const bool active = !m_DynamicLocked && !m_DynamicDisplayOff && !m_DynamicStopping &&
 			GetConfig(it).Accent == AppearanceAccent::Dynamic;
 		needed |= active;
 		if (!active)
@@ -805,7 +808,7 @@ void TaskbarAttributeWorker::RequestDynamicFocusSample()
 {
 	// Coalesce foreground bursts without changing the steady-state 2Hz timer.
 	// SampleDynamic also enforces the shared 200ms minimum between attempts.
-	if (m_DynamicTimer && !m_DynamicFocusTimer && !m_DynamicLocked && !m_DynamicDisplayOff)
+	if (m_DynamicTimer && !m_DynamicFocusTimer && !m_DynamicLocked && !m_DynamicDisplayOff && !m_DynamicStopping)
 	{
 		m_DynamicFocusTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_FOCUS_TIMER, 200, nullptr, 50) != 0;
 	}
@@ -813,7 +816,7 @@ void TaskbarAttributeWorker::RequestDynamicFocusSample()
 
 void TaskbarAttributeWorker::SampleDynamic()
 {
-	if (!m_DynamicTimer || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling || m_disableAttributeRefreshReply) return;
+	if (!m_DynamicTimer || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling || m_DynamicStopping || m_disableAttributeRefreshReply) return;
 	const auto now = GetTickCount64();
 	if (now - m_DynamicLastSample < 200) return;
 	m_DynamicLastSample = now;
@@ -1811,6 +1814,7 @@ void TaskbarAttributeWorker::ResetState(bool manual)
 
 TaskbarAttributeWorker::~TaskbarAttributeWorker() noexcept(false)
 {
+	m_DynamicStopping = true;
 	m_disableAttributeRefreshReply = true;
 	UpdateDynamicTimer();
 	WTSUnRegisterSessionNotification(m_WindowHandle);

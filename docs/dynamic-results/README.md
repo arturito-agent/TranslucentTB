@@ -58,3 +58,9 @@ actual Windows11 VM, without TranslucentTB running. The static scene does not
 animate; the changing/interaction scenes produce repeated paints. Native file
 transport changed line endings to CRLF; canonical LF text was matched to source.
 This is workload evidence only, not a backend/resource comparison.
+
+`policy-recompute-gdi-51b4-negative-r1.json` is a controlled negative result for
+transient teardown. `passed=true` means the requested bad behavior was observed:
+64timer stops with suppression bit4, followed by an active sampler. The probe's
+synthetic unlock notifications do not change the Windows session lock state.
+It establishes neither the cause of the spontaneous stop nor a resource budget.

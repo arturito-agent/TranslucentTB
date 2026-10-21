@@ -102,6 +102,7 @@ private:
 	bool m_DynamicLocked = false;
 	bool m_DynamicDisplayOff = false;
 	bool m_DynamicSampling = false;
+	bool m_DynamicStopping = false;
 	ULONGLONG m_DynamicLastSample = 0;
 	std::uint64_t m_DynamicSamples = 0;
 	std::uint64_t m_DynamicChanges = 0;

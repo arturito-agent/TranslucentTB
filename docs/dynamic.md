@@ -303,12 +303,25 @@ snapshots and counters, with no continuous file logging or new polling thread.
 
 Context bits are locked=1, display-off=2, attribute replies suppressed=4,
 state reset in progress=8, sampling in progress=16, empty taskbar map=32 and
-Desktop configured with another appearance=64. These are context, not a list of
+Desktop configured with another appearance=64; application shutdown=128. These are context, not a list of
 independent stop reasons: another state can legitimately select Dynamic while
 Desktop uses Clear. Appearance values are Normal=0, Opaque=1, Clear=2, Blur=3,
 Acrylic=4 and Dynamic=5. A zero last-error value does not override a nonzero
-timer creation failure count. The diagnostic addition does not change timer
-selection/capture policy or claim to fix the remaining intermittent stop.
+timer creation failure count. Instrumentation revision51b47c3 did not change
+timer policy. A subsequent controlled probe showed64transient stops in6seconds
+when a synthetic unlock notification recalculated policy while composition
+refresh replies were suppressed. Current source keeps the timer/capture alive
+during that temporary suppression and uses a separate shutdown flag; sampling
+still skips the critical section. Actual lock, display-off and inactive
+appearances retain their stop behavior. This removes the demonstrated transient
+teardown path; the spontaneous long-series stop still needs validation.
+
+`refresh-race.ps1 -PolicyRecompute` covers that overlap through the actual worker
+message handler. It sends a synthetic WTS unlock notification while beginning
+already unlocked; it never locks/unlocks the real session and does not establish
+session-lock compatibility. The positive regression requires no additional
+regular-timer stops. `-ExpectTransientStops` is only for the known-broken negative
+control, which finishes active but records the unwanted stops.
 
 For XAML taskbars, Dynamic also requests the light/dark theme with greater
 black/white contrast on that taskbar's XAML root. The chosen RGB is unchanged.
