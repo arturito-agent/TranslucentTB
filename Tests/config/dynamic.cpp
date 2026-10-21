@@ -4,10 +4,19 @@
 #include "config/taskbarappearance.hpp"
 #include "config/activeinactivetaskbarappearance.hpp"
 
-TEST(DynamicAppearance, JsonAndWinrtRoundTrip)
+// Keep activation factories within a single COM lifetime, like the application.
+class DynamicAppearance : public ::testing::Test {
+protected:
+    static void SetUpTestSuite() { winrt::init_apartment(winrt::apartment_type::multi_threaded); }
+    static void TearDownTestSuite()
+    {
+        winrt::clear_factory_cache();
+        winrt::uninit_apartment();
+    }
+};
+
+TEST_F(DynamicAppearance, JsonAndWinrtRoundTrip)
 {
-	winrt::init_apartment(winrt::apartment_type::multi_threaded);
-	struct Apartment { ~Apartment() { winrt::uninit_apartment(); } } apartment;
 	rj::GenericDocument<rj::UTF16LE<>> document;
 	document.Parse(L"{\"accent\":\"dynamic\",\"color\":\"#123456FF\"}");
 	ASSERT_FALSE(document.HasParseError());
@@ -28,7 +37,7 @@ TEST(DynamicAppearance, JsonAndWinrtRoundTrip)
 	EXPECT_EQ(restored.Color.ToRGBA(), appearance.Color.ToRGBA());
 }
 
-TEST(DynamicAppearance, LegacyAndInactiveRules)
+TEST_F(DynamicAppearance, LegacyAndInactiveRules)
 {
 	rj::GenericDocument<rj::UTF16LE<>> document;
 	document.Parse(L"{\"accent\":\"clear\",\"inactive\":{\"accent\":\"dynamic\"}}");
@@ -39,12 +48,11 @@ TEST(DynamicAppearance, LegacyAndInactiveRules)
 	EXPECT_EQ(rule.Inactive->Accent, AppearanceAccent::Dynamic);
 }
 
-TEST(DynamicAppearance, V2JsonAndWinrtRoundTrip)
+TEST_F(DynamicAppearance, V2JsonAndWinrtRoundTrip)
 {
-	winrt::init_apartment(winrt::apartment_type::multi_threaded);
-	struct Apartment { ~Apartment() { winrt::uninit_apartment(); } } apartment;
 	rj::GenericDocument<rj::UTF16LE<>> document;
 	document.Parse(L"{\"accent\":\"dynamic_v2\",\"color\":\"#203040FF\"}");
+	ASSERT_FALSE(document.HasParseError());
 	TaskbarAppearance appearance;
 	appearance.Deserialize(document, nullptr);
 	EXPECT_EQ(appearance.Accent, AppearanceAccent::DynamicV2);
@@ -55,6 +63,7 @@ TEST(DynamicAppearance, V2JsonAndWinrtRoundTrip)
 	rj::Writer<decltype(buffer), rj::UTF16LE<>, rj::UTF16LE<>> writer(buffer);
 	writer.StartObject(); appearance.Serialize(writer); writer.EndObject();
 	document.Parse(buffer.GetString());
+	ASSERT_FALSE(document.HasParseError());
 	TaskbarAppearance restored;
 	restored.Deserialize(document, nullptr);
 	EXPECT_EQ(restored.Accent, AppearanceAccent::DynamicV2);
