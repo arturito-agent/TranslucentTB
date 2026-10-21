@@ -155,6 +155,11 @@
                         <primitives:AccentState>Dynamic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+                <muxc:RadioMenuFlyoutItem Text="Dynamic v2" GroupName="MaximizedCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>DynamicV2</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_StartOpened" Style="{StaticResource MergeIconsMenuFlyoutSubItem}">
                 <MenuFlyoutSubItem.Tag>

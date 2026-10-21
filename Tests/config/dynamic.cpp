@@ -38,3 +38,24 @@ TEST(DynamicAppearance, LegacyAndInactiveRules)
 	ASSERT_TRUE(rule.Inactive);
 	EXPECT_EQ(rule.Inactive->Accent, AppearanceAccent::Dynamic);
 }
+
+TEST(DynamicAppearance, V2JsonAndWinrtRoundTrip)
+{
+	winrt::init_apartment(winrt::apartment_type::multi_threaded);
+	struct Apartment { ~Apartment() { winrt::uninit_apartment(); } } apartment;
+	rj::GenericDocument<rj::UTF16LE<>> document;
+	document.Parse(L"{\"accent\":\"dynamic_v2\",\"color\":\"#203040FF\"}");
+	TaskbarAppearance appearance;
+	appearance.Deserialize(document, nullptr);
+	EXPECT_EQ(appearance.Accent, AppearanceAccent::DynamicV2);
+	const txmp::TaskbarAppearance model = appearance;
+	EXPECT_EQ(model.Accent(), txmp::AccentState::DynamicV2);
+	EXPECT_EQ(TaskbarAppearance(model).Accent, AppearanceAccent::DynamicV2);
+	rj::GenericStringBuffer<rj::UTF16LE<>> buffer;
+	rj::Writer<decltype(buffer), rj::UTF16LE<>, rj::UTF16LE<>> writer(buffer);
+	writer.StartObject(); appearance.Serialize(writer); writer.EndObject();
+	document.Parse(buffer.GetString());
+	TaskbarAppearance restored;
+	restored.Deserialize(document, nullptr);
+	EXPECT_EQ(restored.Accent, AppearanceAccent::DynamicV2);
+}

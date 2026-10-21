@@ -93,6 +93,7 @@ void TaskbarAttributeWorker::OnWindowStateChange(DWORD, HWND hwnd, LONG idObject
 	if (const Window window(hwnd); idObject == OBJID_WINDOW && idChild == CHILDID_SELF && window.valid())
 	{
 		InsertWindow(window, true);
+		OnDynamicContentEvent(0, hwnd, idObject, idChild, 0, 0);
 	}
 }
 
@@ -339,7 +340,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		switch (wParam)
 		{
 		case 255: return 0x44594E01; // Distinguish missing telemetry from valid zero counts.
-		case 254: return 7; // Capture, scheduler and bounded discovery diagnostics.
+		case 254: return 15; // Capture, scheduler and bounded discovery diagnostics.
 		case 0: return static_cast<LRESULT>(m_DynamicSamples);
 		case 1: return static_cast<LRESULT>(m_DynamicChanges);
 		case 2: return static_cast<LRESULT>(m_DynamicApplications);
@@ -367,6 +368,9 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		case 24: return m_DynamicRecoveryAttempts;
 		case 25: return m_DynamicRecoveryError;
 		case 26: return static_cast<LRESULT>(m_DynamicRecoveryFailures);
+		case 27: return m_DynamicV2Timer;
+		case 28: return m_DynamicV2Burst.remaining;
+		case 29: return static_cast<LRESULT>(m_DynamicV2Triggers);
 		default: return 0;
 		}
 	}
@@ -381,6 +385,19 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 			++m_DynamicRecoveryAttempts;
 			++m_DynamicRecoveryRequests;
 			ResetState(false, true);
+		}
+		return 0;
+	}
+	if (uMsg == WM_TIMER && wParam == DYNAMIC_V2_TIMER)
+	{
+		const auto now = GetTickCount64();
+		if (m_DynamicV2Timer && now >= m_DynamicV2Burst.due)
+		{
+			KillTimer(m_WindowHandle, DYNAMIC_V2_TIMER);
+			m_DynamicV2Timer = false;
+			SampleDynamic(true);
+			m_DynamicV2Burst.Consumed(GetTickCount64());
+			ArmDynamicV2Timer();
 		}
 		return 0;
 	}
@@ -579,7 +596,9 @@ TaskbarAppearance TaskbarAttributeWorker::GetConfig(taskbar_iterator taskbar) co
 			if (const auto rule = config.VisibleWindowAppearance.FindRule(m_ForegroundWindow))
 			{
 				// if it has a rule, use that rule
-				return *rule;
+				auto appearance = *rule;
+				appearance.Accent = ScopedAppearanceAccent(appearance.Accent, false);
+				return appearance;
 			}
 		}
 
@@ -650,9 +669,9 @@ void TaskbarAttributeWorker::ShowTaskbarLine(const TaskbarInfo &taskbar, bool sh
 
 void TaskbarAttributeWorker::SetAttribute(taskbar_iterator taskbar, TaskbarAppearance config)
 {
-	const bool dynamic = config.Accent == AppearanceAccent::Dynamic;
+	const bool dynamic = IsDynamicAccent(config.Accent);
 	// Resolve application-only Dynamic before either Windows composition path.
-	if (config.Accent == AppearanceAccent::Dynamic)
+	if (dynamic)
 	{
 		++m_DynamicApplications;
 		if (const auto color = taskbar->second.DynamicState.color)
@@ -739,7 +758,7 @@ void TaskbarAttributeWorker::RefreshAttribute(taskbar_iterator taskbar)
 	const auto taskbarInfo = taskbar->second.Taskbar;
 
 	const auto &cfg = GetConfig(taskbar);
-	if (cfg.Accent != AppearanceAccent::Dynamic) taskbar->second.DynamicState.pending.reset();
+	if (!IsDynamicAccent(cfg.Accent)) taskbar->second.DynamicState.pending.reset();
 	UpdateDynamicTimer();
 	SetAttribute(taskbar, cfg);
 
@@ -768,6 +787,7 @@ void TaskbarAttributeWorker::RefreshAllAttributes()
 	{
 		refresher.refresh(it);
 	}
+	RequestDynamicV2Sample();
 	// Configuration changes also need to cancel/start discovery when no
 	// taskbar has been identified yet; there are no attributes to refresh.
 	if (m_Taskbars.empty()) UpdateDynamicRecoveryTimer();
@@ -786,13 +806,18 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 {
 	const auto flagsAtEntry = DynamicSchedulerFlags();
 	bool needed = false;
+	bool eventNeeded = false, startBurst = false;
 	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
 		// Suppressing replies during a composition refresh is transient. Keep the
 		// timer and capture resources; SampleDynamic skips that critical section.
 		const bool active = !m_DynamicLocked && !m_DynamicDisplayOff && !m_DynamicStopping &&
-			GetConfig(it).Accent == AppearanceAccent::Dynamic;
-		needed |= active;
+			IsDynamicAccent(GetConfig(it).Accent);
+		const bool eventActive = active && GetConfig(it).Accent == AppearanceAccent::DynamicV2;
+		needed |= active && !eventActive;
+		eventNeeded |= eventActive;
+		startBurst |= eventActive && !it->second.DynamicV2Active;
+		it->second.DynamicV2Active = eventActive;
 		if (!active)
 		{
 			it->second.DynamicCapture.reset();
@@ -823,27 +848,29 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 		KillTimer(m_WindowHandle, DYNAMIC_FOCUS_TIMER);
 		m_DynamicFocusTimer = false;
 	}
+	if (!eventNeeded) CancelDynamicV2();
+	else if (startBurst) RequestDynamicV2Sample();
 	UpdateDynamicRecoveryTimer();
 }
 
 bool TaskbarAttributeWorker::HasConfiguredDynamic() const
 {
 	const auto &config = m_ConfigManager.GetConfig();
-	if (config.DesktopAppearance.Accent == AppearanceAccent::Dynamic) return true;
+	if (IsDynamicAccent(config.DesktopAppearance.Accent)) return true;
 	for (const auto *appearance : { &config.StartOpenedAppearance, &config.SearchOpenedAppearance,
 		&config.TaskViewOpenedAppearance, &config.BatterySaverAppearance })
 	{
-		if (appearance->Enabled && appearance->Accent == AppearanceAccent::Dynamic) return true;
+		if (appearance->Enabled && IsDynamicAccent(appearance->Accent)) return true;
 	}
 	for (const auto *appearance : { &config.VisibleWindowAppearance, &config.MaximisedWindowAppearance })
 	{
 		if (!appearance->Enabled) continue;
-		if (appearance->Accent == AppearanceAccent::Dynamic) return true;
+		if (IsDynamicAccent(appearance->Accent)) return true;
 		const auto dynamicRule = [](const auto &item)
 		{
 			const auto &rule = item.second;
-			return rule.Accent == AppearanceAccent::Dynamic ||
-				(rule.Inactive && rule.Inactive->Accent == AppearanceAccent::Dynamic);
+			return IsDynamicAccent(rule.Accent) ||
+				(rule.Inactive && IsDynamicAccent(rule.Inactive->Accent));
 		};
 		if (std::any_of(appearance->ClassRules.begin(), appearance->ClassRules.end(), dynamicRule) ||
 			std::any_of(appearance->TitleRules.begin(), appearance->TitleRules.end(), dynamicRule) ||
@@ -889,6 +916,7 @@ void TaskbarAttributeWorker::ResetDynamicCaptures()
 
 void TaskbarAttributeWorker::RequestDynamicFocusSample()
 {
+	RequestDynamicV2Sample();
 	// Coalesce foreground bursts without changing the steady-state 2Hz timer.
 	// SampleDynamic also enforces the shared 200ms minimum between attempts.
 	if (m_DynamicTimer && !m_DynamicFocusTimer && !m_DynamicLocked && !m_DynamicDisplayOff && !m_DynamicStopping)
@@ -897,9 +925,48 @@ void TaskbarAttributeWorker::RequestDynamicFocusSample()
 	}
 }
 
-void TaskbarAttributeWorker::SampleDynamic()
+void TaskbarAttributeWorker::CancelDynamicV2()
 {
-	if (!m_DynamicTimer || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling || m_DynamicStopping || m_disableAttributeRefreshReply) return;
+	if (m_DynamicV2Timer) KillTimer(m_WindowHandle, DYNAMIC_V2_TIMER);
+	m_DynamicV2Timer = false;
+	m_DynamicV2Burst.Cancel();
+}
+
+void TaskbarAttributeWorker::ArmDynamicV2Timer()
+{
+	if (!m_DynamicV2Burst.remaining || m_DynamicV2Timer) return;
+	const auto now = GetTickCount64();
+	const UINT delay = static_cast<UINT>(m_DynamicV2Burst.due > now ? m_DynamicV2Burst.due - now : 1);
+	m_DynamicV2Timer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_V2_TIMER, delay, nullptr, 50) != 0;
+	if (!m_DynamicV2Timer) { ++m_DynamicTimerFailures; m_DynamicV2Burst.Cancel(); }
+}
+
+void TaskbarAttributeWorker::RequestDynamicV2Sample()
+{
+	if (m_DynamicLocked || m_DynamicDisplayOff || m_DynamicStopping || m_ResettingState) return;
+	const bool active = std::any_of(m_Taskbars.begin(), m_Taskbars.end(), [](const auto &entry) {
+		return entry.second.DynamicV2Active;
+	});
+	if (!active) return;
+	++m_DynamicV2Triggers;
+	m_DynamicV2Burst.Request(GetTickCount64());
+	ArmDynamicV2Timer();
+}
+
+void TaskbarAttributeWorker::OnDynamicContentEvent(DWORD, HWND hwnd, LONG, LONG, DWORD, DWORD)
+{
+	if (!hwnd) return;
+	const auto root = GetAncestor(hwnd, GA_ROOT);
+	const bool relevant = root == m_ForegroundWindow.handle() ||
+		std::any_of(m_Taskbars.begin(), m_Taskbars.end(), [hwnd](const auto &entry) {
+			return entry.second.Taskbar.TaskbarWindow.handle() == hwnd;
+		});
+	if (relevant) RequestDynamicV2Sample();
+}
+
+void TaskbarAttributeWorker::SampleDynamic(bool eventDriven)
+{
+	if ((eventDriven ? !m_DynamicV2Burst.remaining : !m_DynamicTimer) || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling || m_DynamicStopping || m_disableAttributeRefreshReply) return;
 	const auto now = GetTickCount64();
 	if (now - m_DynamicLastSample < 200) return;
 	m_DynamicLastSample = now;
@@ -909,7 +976,7 @@ void TaskbarAttributeWorker::SampleDynamic()
 	std::vector<std::pair<HMONITOR, HWND>> changed;
 	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
-		if (GetConfig(it).Accent != AppearanceAccent::Dynamic) continue;
+		if (GetConfig(it).Accent != (eventDriven ? AppearanceAccent::DynamicV2 : AppearanceAccent::Dynamic)) continue;
 		MONITORINFO monitor{ sizeof(MONITORINFO) };
 		RECT bar{};
 		const auto hwnd = it->second.Taskbar.TaskbarWindow.handle();
@@ -951,7 +1018,7 @@ void TaskbarAttributeWorker::SampleDynamic()
 	{
 		const auto it = m_Taskbars.find(monitor);
 		if (it != m_Taskbars.end() && it->second.Taskbar.TaskbarWindow.handle() == hwnd &&
-			GetConfig(it).Accent == AppearanceAccent::Dynamic) SetAttribute(it, GetConfig(it));
+			IsDynamicAccent(GetConfig(it).Accent)) SetAttribute(it, GetConfig(it));
 	}
 	UpdateDynamicTimer();
 }
@@ -1546,6 +1613,9 @@ TaskbarAttributeWorker::TaskbarAttributeWorker(ConfigManager &cfgManager, HINSTA
 	m_CreateDestroyHook(CreateHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY, CreateThunk(&TaskbarAttributeWorker::OnWindowCreateDestroy))),
 	m_ForegroundChangeHook(CreateHook(EVENT_SYSTEM_FOREGROUND, CreateThunk(&TaskbarAttributeWorker::OnForegroundWindowChange))),
 	m_OrderChangeHook(CreateHook(EVENT_OBJECT_REORDER, CreateThunk(&TaskbarAttributeWorker::OnWindowOrderChange))),
+	m_DynamicScrollEndHook(CreateHook(EVENT_SYSTEM_SCROLLINGEND, CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent))),
+	m_DynamicScrollHook(CreateHook(EVENT_OBJECT_CONTENTSCROLLED, CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent))),
+	m_DynamicSelectionHook(CreateHook(EVENT_OBJECT_SELECTION, EVENT_OBJECT_SELECTIONWITHIN, CreateThunk(&TaskbarAttributeWorker::OnDynamicContentEvent))),
 	m_SearchManager(nullptr),
 	m_SearchViewCoordinator(nullptr),
 	m_FindInStartViewCoordinator(nullptr),
@@ -1728,6 +1798,7 @@ void TaskbarAttributeWorker::ResetState(bool manual, bool dynamicRecoveryRetry)
 {
 	if (!m_ResettingState)
 	{
+		CancelDynamicV2();
 		if (m_DynamicRecoveryTimer)
 		{
 			KillTimer(m_WindowHandle, DYNAMIC_RECOVERY_TIMER);
@@ -1743,6 +1814,7 @@ void TaskbarAttributeWorker::ResetState(bool manual, bool dynamicRecoveryRetry)
 			m_ResettingState = false;
 			m_ResetStateReentered = false;
 			UpdateDynamicRecoveryTimer();
+			RequestDynamicV2Sample();
 		});
 
 		// Clear state

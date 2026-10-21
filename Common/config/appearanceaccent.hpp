@@ -7,5 +7,16 @@ enum class AppearanceAccent {
 	Clear = 2,
 	Blur = 3,
 	Acrylic = 4,
-	Dynamic = 5
+	Dynamic = 5,
+	DynamicV2 = 6
 };
+
+constexpr bool IsDynamicAccent(AppearanceAccent accent) noexcept
+{
+	return accent == AppearanceAccent::Dynamic || accent == AppearanceAccent::DynamicV2;
+}
+
+constexpr AppearanceAccent ScopedAppearanceAccent(AppearanceAccent accent, bool maximized) noexcept
+{
+	return accent == AppearanceAccent::DynamicV2 && !maximized ? AppearanceAccent::Opaque : accent;
+}

@@ -33,6 +33,7 @@
 #include "../loadabledll.hpp"
 #include "../managers/configmanager.hpp"
 #include "dynamiccapture.hpp"
+#include "dynamic/burst.hpp"
 
 enum class TaskbarType {
 	Unknown,
@@ -58,6 +59,7 @@ private:
 		std::unordered_set<Window> MaximisedWindows;
 		std::unordered_set<Window> NormalWindows;
 		Dynamic::Stability DynamicState;
+		bool DynamicV2Active = false;
 		std::unique_ptr<Dynamic::Capture> DynamicCapture;
 	};
 
@@ -98,6 +100,9 @@ private:
 	std::unordered_set<Window> m_NormalTaskbars;
 	ConfigManager &m_ConfigManager;
 	bool m_DynamicTimer = false;
+	bool m_DynamicV2Timer = false;
+	Dynamic::Burst m_DynamicV2Burst;
+	std::uint64_t m_DynamicV2Triggers = 0;
 	bool m_DynamicFocusTimer = false;
 	bool m_DynamicLocked = false;
 	bool m_DynamicDisplayOff = false;
@@ -129,6 +134,7 @@ private:
 	wil::unique_hpowernotify m_DynamicDisplayHook;
 	static constexpr UINT_PTR DYNAMIC_TIMER = 0x44594E;
 	static constexpr UINT_PTR DYNAMIC_FOCUS_TIMER = 0x44594F;
+	static constexpr UINT_PTR DYNAMIC_V2_TIMER = 0x445951;
 	static constexpr UINT_PTR DYNAMIC_RECOVERY_TIMER = 0x445950;
 	bool HasConfiguredDynamic() const;
 	void UpdateDynamicRecoveryTimer();
@@ -136,7 +142,11 @@ private:
 	std::uint32_t DynamicSchedulerFlags() const noexcept;
 	void ResetDynamicCaptures();
 	void RequestDynamicFocusSample();
-	void SampleDynamic();
+	void SampleDynamic(bool eventDriven = false);
+	void RequestDynamicV2Sample();
+	void ArmDynamicV2Timer();
+	void CancelDynamicV2();
+	void CALLBACK OnDynamicContentEvent(DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD thread, DWORD time);
 
 	// Hooks
 	member_thunk::page m_ThunkPage;
@@ -150,6 +160,9 @@ private:
 	wil::unique_hwineventhook m_TitleChangeHook;
 	wil::unique_hwineventhook m_ParentChangeHook;
 	wil::unique_hwineventhook m_OrderChangeHook;
+	wil::unique_hwineventhook m_DynamicScrollEndHook;
+	wil::unique_hwineventhook m_DynamicScrollHook;
+	wil::unique_hwineventhook m_DynamicSelectionHook;
 	wil::unique_hpowernotify m_PowerSaverHook;
 
 	// IAppVisibility
@@ -267,15 +280,10 @@ private:
 
 	inline TaskbarAppearance WithPreview(txmp::TaskbarState state, const TaskbarAppearance &appearance) const
 	{
-		const auto &preview = m_ColorPreviews.at(static_cast<std::size_t>(state));
-		if (preview)
-		{
-			return { appearance.Accent, *preview, appearance.ShowPeek, appearance.ShowLine, appearance.BlurRadius };
-		}
-		else
-		{
-			return appearance;
-		}
+		auto result = appearance;
+		result.Accent = ScopedAppearanceAccent(result.Accent, state == txmp::TaskbarState::MaximisedWindow);
+		if (const auto &preview = m_ColorPreviews.at(static_cast<std::size_t>(state))) result.Color = *preview;
+		return result;
 	}
 
 	inline static HMONITOR GetStartMenuMonitor() noexcept

@@ -1,4 +1,6 @@
 #include "dynamic/analysis.hpp"
+#include "dynamic/burst.hpp"
+#include "config/appearanceaccent.hpp"
 #include "dynamic/geometry.hpp"
 #include <cstdlib>
 #include <iostream>
@@ -116,6 +118,22 @@ int main()
 		Check(!state.Observe(candidate, 1000, 700), "identical color not reapplied");
 		Check(!state.Observe(Dynamic::Segment{red,0,2}, 1000, 1200) && state.color == blue, "noise keeps valid color");
 		Check(!state.Observe(std::nullopt, 1000, 1700) && state.color == blue, "capture failure keeps valid color");
+		Dynamic::Burst burst;
+		Check(burst.remaining == 0 && burst.due == 0, "event scheduler starts idle");
+		burst.Request(1000);
+		Check(burst.remaining == 3 && burst.due == 1200, "event arms delayed capture");
+		burst.Request(1100);
+		Check(burst.remaining == 3 && burst.due == 1200, "event storm does not postpone first capture");
+		burst.Consumed(1200);
+		Check(burst.remaining == 2 && burst.due == 1500, "second read confirms color");
+		burst.Consumed(1500); burst.Consumed(2000);
+		Check(burst.remaining == 0 && burst.due == 0, "burst ends without periodic work");
+		burst.Request(3000); burst.Cancel();
+		Check(burst.remaining == 0 && burst.due == 0, "deactivation cancels all pending work");
+		Check(ScopedAppearanceAccent(AppearanceAccent::DynamicV2, false) == AppearanceAccent::Opaque,
+			"v2 cannot activate outside maximized state");
+		Check(ScopedAppearanceAccent(AppearanceAccent::DynamicV2, true) == AppearanceAccent::DynamicV2,
+			"v2 retained in maximized state");
 		std::cout << checks << " Dynamic checks passed\n";
 		return EXIT_SUCCESS;
 	} catch (const std::exception &e) { std::cerr << e.what() << '\n'; return EXIT_FAILURE; }

@@ -108,13 +108,14 @@ protected:
 	}
 
 private:
-	static constexpr std::array<std::wstring_view, 6> ACCENT_MAP = {
+	static constexpr std::array<std::wstring_view, 7> ACCENT_MAP = {
 		L"normal",
 		L"opaque",
 		L"clear",
 		L"blur",
 		L"acrylic",
-		L"dynamic"
+		L"dynamic",
+		L"dynamic_v2"
 	};
 
 	static constexpr std::wstring_view ACCENT_KEY = L"accent";
