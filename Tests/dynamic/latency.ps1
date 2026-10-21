@@ -6,6 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($Trials -lt 1 -or (Test-Path -LiteralPath $Output)) { throw 'Choose a new output file and positive trial count' }
 . (Join-Path $PSScriptRoot 'fixture.ps1') -DefineOnly
+[DynamicFixture]::PrepareDisplay($true)
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -39,7 +40,6 @@ if (-not [DynamicLatency]::GetWindowRect([DynamicLatency]::Taskbar(),[ref]$rect)
 $vertical = ($rect.Bottom-$rect.Top) -gt ($rect.Right-$rect.Left)
 $x = if($vertical){[int](($rect.Left+$rect.Right)/2)}else{$rect.Left+10}
 $y = if($vertical){$rect.Top+10}else{[int](($rect.Top+$rect.Bottom)/2)}
-[DynamicFixture]::PrepareDisplay($true)
 $a = New-Object DynamicFixture -ArgumentList 'Light',$vertical
 $b = New-Object DynamicFixture -ArgumentList 'Dark',$vertical
 $a.Text = 'Dynamic latency reference A';$b.Text = 'Dynamic latency reference B'

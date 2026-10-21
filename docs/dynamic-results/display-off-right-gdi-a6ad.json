@@ -1,0 +1,15 @@
+{
+  "stage": "complete",
+  "qpc_frequency": 10000000,
+  "start_qpc": 50867577083,
+  "off_samples_start": 415,
+  "off_timer": 0,
+  "off_paused": 1,
+  "off_samples_end": 415,
+  "off_passed": true,
+  "resumed_samples": 425,
+  "resumed_timer": 1,
+  "resumed_paused": 0,
+  "resume_passed": true,
+  "end_qpc": 51122388413
+}

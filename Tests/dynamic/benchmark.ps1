@@ -15,6 +15,7 @@ elseif ($Repetitions -lt 3 -or $WarmupSeconds -lt 120 -or $DurationSeconds -lt 3
 if (Get-Process TranslucentTB -ErrorAction SilentlyContinue) { throw 'Close the current instance before starting the suite' }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Choose a new output directory' }
 $builds = Get-Content -LiteralPath $Manifest -Raw | ConvertFrom-Json
+. (Join-Path $PSScriptRoot 'taskbar-position.ps1') -DefineOnly -Position $Position
 foreach ($name in @('baseline','gdi','dxgi')) {
     $build = $builds.$name
     if (-not $build.commit -or -not (Test-Path -LiteralPath $build.executable)) { throw "Missing build: $name" }
@@ -25,15 +26,24 @@ using System;
 using System.Runtime.InteropServices;
 public static class DynamicBenchmark {
     [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left,Top,Right,Bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct MonitorInfo { public uint Size; public Rect Monitor,Work;public uint Flags; }
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr FindWindow(string c,string n);
-    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr w,out Rect r);
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr w,uint flags);
+    [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m,ref MonitorInfo info);
+    [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr w,IntPtr after,int x,int y,int width,int height,uint flags);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr w,out uint pid);
     [DllImport("user32.dll")] static extern bool PostMessage(IntPtr w,uint m,IntPtr p,IntPtr l);
-    public static string Position() {
-        Rect r; IntPtr w=FindWindow("Shell_TrayWnd",null);
-        if(w==IntPtr.Zero || !GetWindowRect(w,out r)) throw new InvalidOperationException("No real taskbar");
-        if(r.Right-r.Left>r.Bottom-r.Top) return r.Top==0 ? "Top" : "Bottom";
-        return r.Left==0 ? "Left" : "Right";
+    [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string name);
+    [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr w,uint m,UIntPtr p,IntPtr l,uint flags,uint timeout,out UIntPtr result);
+    public static bool WorkerReady(uint expectedPid,bool dynamic) {
+        IntPtr w=FindWindow("TTB_WorkerWindow","TTB_WorkerWindow");uint pid;
+        if(w==IntPtr.Zero)return false;
+        GetWindowThreadProcessId(w,out pid);if(pid!=expectedPid)return false;
+        if(!dynamic)return true;
+        uint m=RegisterWindowMessage("TTB_QueryDynamicStats");UIntPtr result;
+        if(SendMessageTimeout(w,m,(UIntPtr)255,IntPtr.Zero,2,100,out result)==IntPtr.Zero || result.ToUInt64()!=0x44594e01)return false;
+        if(SendMessageTimeout(w,m,(UIntPtr)6,IntPtr.Zero,2,100,out result)==IntPtr.Zero || result.ToUInt64()!=0)return false;
+        return SendMessageTimeout(w,m,(UIntPtr)5,IntPtr.Zero,2,100,out result)!=IntPtr.Zero && result.ToUInt64()==1;
     }
     public static bool CloseFixture(uint expectedPid) {
         IntPtr w=FindWindow(null,"Dynamic synthetic fixture"); uint pid;
@@ -46,9 +56,16 @@ public static class DynamicBenchmark {
         if(w==IntPtr.Zero) return false;
         GetWindowThreadProcessId(w,out pid);return pid==expectedPid;
     }
+    public static void FitFixture(uint expectedPid) {
+        IntPtr w=FindWindow(null,"Dynamic synthetic fixture");uint pid;
+        GetWindowThreadProcessId(w,out pid);
+        if(w==IntPtr.Zero || pid!=expectedPid) throw new InvalidOperationException("Fixture ownership mismatch");
+        MonitorInfo info=new MonitorInfo();info.Size=(uint)Marshal.SizeOf(typeof(MonitorInfo));
+        if(!GetMonitorInfo(MonitorFromWindow(w,2),ref info) || !SetWindowPos(w,IntPtr.Zero,info.Work.Left,info.Work.Top,info.Work.Right-info.Work.Left,info.Work.Bottom-info.Work.Top,0x14)) throw new InvalidOperationException("Fixture geometry update failed");
+    }
 }
 '@
-if ([DynamicBenchmark]::Position() -ne $Position) { throw 'Requested position does not match the real taskbar' }
+Set-ExperimentTaskbarPosition $Position
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 Copy-Item -LiteralPath $Manifest -Destination (Join-Path $OutputDirectory 'builds.json')
 $powerShell = Join-Path $PSHOME 'powershell.exe'
@@ -102,7 +119,15 @@ try {
             Start-Sleep -Seconds 2
             if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process explorer.exe | Out-Null }
             Start-Sleep -Seconds 5
+            Set-ExperimentTaskbarPosition $Position
+            if([ExperimentTaskbar]::Current() -ne $Position){throw 'Taskbar edge changed after Explorer restart'}
+            [DynamicBenchmark]::FitFixture($fixture.Id)
             $target = Start-Process -FilePath $targetPath -WorkingDirectory (Split-Path -Parent $targetPath) -PassThru
+            $readyDeadline=[Diagnostics.Stopwatch]::StartNew()
+            while(-not [DynamicBenchmark]::WorkerReady($target.Id,($name -ne 'baseline'))) {
+                if($target.HasExited -or $readyDeadline.Elapsed.TotalSeconds -gt 10){throw 'Target not ready: begin with an awake, unlocked actual console'}
+                Start-Sleep -Milliseconds 100
+            }
             $receipt = [ordered]@{label=$label;diagnostic_only=[bool]$Smoke;commit=$build.commit;executable_sha256=$build.sha256;pid=$target.Id;start_qpc=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency;warmup_seconds=$WarmupSeconds;duration_seconds=$DurationSeconds}
             $receipt | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'current-phase.json')
             $csv = Join-Path $OutputDirectory "$label.csv"
@@ -110,6 +135,18 @@ try {
             $collector = Start-Script $metricCode
             if (-not $collector.WaitForExit(($WarmupSeconds+$DurationSeconds+30)*1000) -or $collector.ExitCode -ne 0) { throw "Collector failed: $label" }
             if (-not [DynamicBenchmark]::FixtureExists($fixture.Id)) { throw 'Fixture vanished during measurement' }
+            $targetRows = @(Import-Csv -LiteralPath $csv | Where-Object role -eq 'target')
+            if ($targetRows.Count -lt 2) { throw "Missing target endpoints: $label" }
+            foreach($row in $targetRows){if($row.taskbar_edge -ne $Position){throw "Real taskbar edge changed during measurement: $label"}}
+            if ($name -ne 'baseline') {
+                foreach ($row in $targetRows) {
+                    if ($row.dynamic_stats_available -ne 'True' -or $row.capture_stats_available -ne 'True' -or
+                        $row.dynamic_timer -ne '1' -or $row.dynamic_paused -ne '0' -or [uint64]$row.captured_frames -lt 1) { throw "Candidate was not capturing: $label" }
+                    if ($Workload -eq 'Static' -and $row.dynamic_rgb -ne '2121888') { throw "Incorrect static reference color: $label" }
+                }
+                if ([uint64]$targetRows[-1].dynamic_samples -le [uint64]$targetRows[0].dynamic_samples -or
+                    [uint64]$targetRows[-1].capture_failures -ne [uint64]$targetRows[0].capture_failures) { throw "Capture stopped or failed during measurement: $label" }
+            }
             $receipt['end_qpc'] = [Diagnostics.Stopwatch]::GetTimestamp()
             Exit-Target $target $targetPath (Join-Path $OutputDirectory "$label-exit.json")
             $target = $null

@@ -9,7 +9,8 @@ In JSON, set `"accent": "dynamic"` on any supported appearance or rule.
 This is an experiment in progress. The native menu, bottom-taskbar color,
 configuration persistence and exit restoration were exercised on Windows 11
 26100.8875 with revision 3ea6890. Revision a6ad586 passes the six synthetic
-color/continuity cases on a real left taskbar with both GDI and DXGI. Classic
+color/continuity cases on real left/right taskbars with both GDI and DXGI;
+a1b05b5 also passes the right cases and 30 focus-latency trials per backend. Classic
 taskbar glyph contrast still follows the system theme and fails on some dark
 backgrounds. See [validation status](dynamic-validation.md). Full integration
 coverage and benchmarks remain pending. No performance result is claimed.
@@ -93,6 +94,11 @@ Production Dynamic itself never prevents screen sleep. `measure.ps1` collects bo
 observations to a specified CSV after a warmup. Keep fixture, measurement
 configuration and visualization connection unchanged between compared runs.
 These are experiment tools, not permanent runtime helpers.
+Start tests with the actual console awake and unlocked. A display-on power
+request holds an already-awake virtual display; it does not reliably wake one
+that is already off. A console key supplies that wake. Paused runs are rejected.
+The adjacent strip includes visible window frames and scrollbars, which can
+determine its color.
 
 `functional.ps1` verifies six scenes against both the worker's chosen RGB and
 the actual taskbar pixel. `latency.ps1` measures internal-content or foreground
@@ -105,6 +111,13 @@ an orchestration check. Normal mode requires 120s warmup and at least 300s
 measured per phase. Explorer is restarted identically before every phase because
 the injected service remains pinned until its process exits. Keep an unrelated
 Windows desktop controller's shell/virtual-desktop references fresh afterwards.
+Lateral runs use `taskbar-position.ps1` with the reviewed ExplorerPatcher
+26100.8457.70.3 private position message. The driver checks its version/module,
+reapplies the real edge after each Explorer restart and refits the owned fixture.
+Every CSV batch records physical taskbar bounds, edge and DPI. A phase with a
+different edge, paused/stopped sampling, failed captures or incorrect static
+reference color is rejected. `states.ps1` checks the documented state/rule
+configurations, including fallback use on unreliable native window frames.
 
 The collector includes a final endpoint, checks an optional target PID, keeps
 the observer's costs separate, and leaves unavailable metrics empty with an

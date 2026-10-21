@@ -1,0 +1,26 @@
+{
+  "application_commit": "a1b05b5840d48f29487fb1622091f576fb0505bb",
+  "taskbar": "ExplorerPatcher classic right, 62x800 physical pixels",
+  "display": "1280x800, 100%, SDR",
+  "mode": "Focus",
+  "poll_interval_ms": 50,
+  "spacing_ms": "3000 + ((trial * 137) % 499)",
+  "percentile_method": "nearest rank",
+  "focus_p95_budget_seconds": 1,
+  "backends": {
+    "gdi": {
+      "trials": 30,
+      "passed": 30,
+      "median_seconds": 0.7392162,
+      "p95_seconds": 0.9229922,
+      "max_seconds": 0.9385605
+    },
+    "dxgi": {
+      "trials": 30,
+      "passed": 30,
+      "median_seconds": 0.7083697,
+      "p95_seconds": 0.9549723,
+      "max_seconds": 1.0983816
+    }
+  }
+}

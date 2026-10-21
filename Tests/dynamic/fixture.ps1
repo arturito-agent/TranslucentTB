@@ -23,7 +23,8 @@ public sealed class DynamicFixture : Form {
     [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
     public static void PrepareDisplay(bool keepAwake) {
         SetThreadDpiAwarenessContext(new IntPtr(-4));
-        SetThreadExecutionState(keepAwake ? 0x80000003u : 0x80000000u);
+        uint previous = SetThreadExecutionState(keepAwake ? 0x80000003u : 0x80000000u);
+        if(keepAwake && previous==0) throw new InvalidOperationException("Display-on test request failed");
     }
     public static void ReleaseDisplay() { SetThreadExecutionState(0x80000000u); }
     public DynamicFixture(string scenario,bool vertical) {

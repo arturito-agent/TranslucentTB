@@ -17,6 +17,7 @@ using System;
 using System.Runtime.InteropServices;
 public static class DynamicMetrics {
     [StructLayout(LayoutKind.Sequential)] public struct FileTime { public uint Low,High; }
+    [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left,Top,Right,Bottom; }
     [DllImport("kernel32.dll",SetLastError=true)] static extern IntPtr OpenProcess(uint access,bool inherit,uint pid);
     [DllImport("kernel32.dll",SetLastError=true)] static extern bool CloseHandle(IntPtr handle);
     [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(IntPtr handle,out FileTime created,out FileTime exited,out FileTime kernel,out FileTime user);
@@ -24,8 +25,19 @@ public static class DynamicMetrics {
     [DllImport("user32.dll",SetLastError=true)] static extern uint GetGuiResources(IntPtr process,uint flags);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindow(string cls,string title);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern uint RegisterWindowMessage(string name);
+    [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window,out Rect rect);
+    [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr window);
     [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SendMessageTimeout(IntPtr wnd,uint msg,UIntPtr wp,IntPtr lp,uint flags,uint timeout,out UIntPtr result);
     public sealed class Counters { public double? CpuSeconds; public uint? GdiObjects,UserObjects; public string Errors=""; }
+    public sealed class Taskbar { public int Left,Top,Right,Bottom;public uint Dpi;public string Edge; }
+    public static void PhysicalCoordinates() { SetThreadDpiAwarenessContext(new IntPtr(-4)); }
+    public static Taskbar ReadTaskbar() {
+        Rect r;IntPtr w=FindWindow("Shell_TrayWnd",null);
+        if(w==IntPtr.Zero || !GetWindowRect(w,out r)) return null;
+        return new Taskbar {Left=r.Left,Top=r.Top,Right=r.Right,Bottom=r.Bottom,Dpi=GetDpiForWindow(w),
+            Edge=r.Right-r.Left>r.Bottom-r.Top?(r.Top==0?"Top":"Bottom"):(r.Left==0?"Left":"Right")};
+    }
     static uint? Gui(IntPtr handle,uint flag,Counters counters) {
         SetLastError(0);
         uint value=GetGuiResources(handle,flag);
@@ -62,6 +74,7 @@ function Read-Metric([scriptblock] $Read, [string] $Name) {
     } catch { $readErrors.Add("${Name}:$($_.Exception.Message)"); return $null }
 }
 $logical = [Environment]::ProcessorCount
+[DynamicMetrics]::PhysicalCoordinates()
 $message = [DynamicMetrics]::RegisterWindowMessage('TTB_QueryDynamicStats')
 Start-Sleep -Seconds $WarmupSeconds
 $watch = [Diagnostics.Stopwatch]::StartNew()
@@ -70,6 +83,7 @@ $deadline = 0.0
 while ($true) {
     $elapsed = $watch.Elapsed.TotalSeconds
     $qpc = [Diagnostics.Stopwatch]::GetTimestamp()
+    $bar = [DynamicMetrics]::ReadTaskbar()
     $rows = New-Object 'System.Collections.Generic.List[object]'
     $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
     $supportsStats = $window -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($window,$message,255) -eq 0x44594E01
@@ -90,6 +104,9 @@ while ($true) {
         $row = [ordered]@{
             label=$Label; commit=$Commit; elapsed_seconds=$elapsed; timestamp_utc=[DateTime]::UtcNow.ToString('o')
             qpc_ticks=$qpc; qpc_frequency=[Diagnostics.Stopwatch]::Frequency
+            taskbar_edge=$(if($bar){$bar.Edge}else{$null});taskbar_dpi=$(if($bar){$bar.Dpi}else{$null})
+            taskbar_left=$(if($bar){$bar.Left}else{$null});taskbar_top=$(if($bar){$bar.Top}else{$null})
+            taskbar_right=$(if($bar){$bar.Right}else{$null});taskbar_bottom=$(if($bar){$bar.Bottom}else{$null})
             process=$process.ProcessName; pid=$process.Id; logical_processors=$logical
             role=$(if($process.Id -eq $PID){'observer'}elseif($process.Id -eq $WorkloadProcessId){'workload'}elseif($process.Id -eq $HarnessProcessId){'harness'}elseif($process.ProcessName -eq 'TranslucentTB'){'target'}elseif($process.ProcessName -eq 'dwm'){'compositor'}elseif($process.ProcessName -eq 'ep_dwm_svc'){'taskbar-helper'}else{'shell'})
             cpu_seconds=$native.CpuSeconds

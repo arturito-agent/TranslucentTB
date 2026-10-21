@@ -40,5 +40,12 @@ if ($Action -eq 'Exit') {
     $names = @('samples','changes','applications','rgb','run_length','timer','paused','last_sample_tick')
     $result = [ordered]@{action=$Action;pid=$targetId;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency}
     for ($i=0;$i -lt $names.Count;$i++) { $result[$names[$i]]=[DynamicSession]::Read($worker,$message,$i) }
+    $result['protocol_marker']=[DynamicSession]::Read($worker,$message,255)
+    $result['capabilities']=[DynamicSession]::Read($worker,$message,254)
+    if($result.protocol_marker -eq 0x44594E01 -and ($result.capabilities -band 1)) {
+        $result['captured_frames']=[DynamicSession]::Read($worker,$message,8)
+        $result['capture_timeouts']=[DynamicSession]::Read($worker,$message,9)
+        $result['capture_failures']=[DynamicSession]::Read($worker,$message,10)
+    }
     [pscustomobject]$result | ConvertTo-Json | Set-Content -Encoding UTF8 $Output
 }

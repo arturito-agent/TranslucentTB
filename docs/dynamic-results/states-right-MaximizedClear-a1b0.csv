@@ -1,0 +1,6 @@
+"case","stage","expected_dynamic","timer","samples_start","samples_end","confirmed_rgb","confirmed_changes","expected_taskbar_rgb","taskbar_pixel_rgb","maximized","title","passed","qpc_ticks","qpc_frequency"
+"MaximizedClear","0","True","1","11","15","0","0","2109504","2109504","False","Dynamic maximize fixture","True","81758281408","10000000"
+"MaximizedClear","1","False","0","16","16","0","0","2109504","2119945","True","Dynamic maximize fixture","True","81799419631","10000000"
+"MaximizedClear","2","True","1","21","24","0","0","2109504","2109504","False","Dynamic maximize fixture","True","81841712197","10000000"
+"MaximizedClear","3","False","0","25","25","0","0","2109504","2119945","True","Dynamic maximize fixture","True","81882799996","10000000"
+"MaximizedClear","4","True","1","30","34","0","0","2109504","2109504","False","Dynamic maximize fixture","True","81925361485","10000000"

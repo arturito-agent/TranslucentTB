@@ -4,6 +4,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'fixture.ps1') -DefineOnly -Orientation $Orientation
+[DynamicFixture]::PrepareDisplay($true)
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -31,6 +32,7 @@ public static class DynamicFunctional {
 $worker = [DynamicFunctional]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
 if ($worker -eq [IntPtr]::Zero) { throw 'Start the candidate in Desktop Dynamic before this test' }
 $message = [DynamicFunctional]::RegisterWindowMessage('TTB_QueryDynamicStats')
+if([DynamicFunctional]::Read($worker,$message,6) -ne 0){throw 'Wake and unlock the actual console before color validation; a power request does not wake an already-off virtual display'}
 $tray = [DynamicFunctional]::FindWindow('Shell_TrayWnd','')
 $rect = New-Object DynamicFunctional+Rect
 if (-not [DynamicFunctional]::GetWindowRect($tray,[ref]$rect)) { throw 'Taskbar rectangle unavailable' }
@@ -49,7 +51,6 @@ $stages = @(
 $script:results = New-Object 'System.Collections.Generic.List[object]'
 $script:stage = 0
 $script:failure = $null
-[DynamicFixture]::PrepareDisplay($true)
 $form = New-Object DynamicFixture -ArgumentList 'Continuity',$vertical
 $clock = [Diagnostics.Stopwatch]::StartNew()
 $timer = New-Object System.Windows.Forms.Timer

@@ -1,7 +1,8 @@
 # TranslucentTB Dynamic experiment
 
 Experimental fork adding Dynamic to the native appearance selector.
-See [Dynamic documentation](docs/dynamic.md) for behavior, tests and current validation limits.
+See [Dynamic documentation](docs/dynamic.md) for behavior, build instructions and
+[validation results](docs/dynamic-validation.md). Resource measurements are in progress.
 
 ---
 

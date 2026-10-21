@@ -21,20 +21,25 @@ public static class DynamicPowerTest {
 '@
 if ([DynamicPowerTest]::Read(5) -ne 1 -or [DynamicPowerTest]::Read(6) -ne 0) { throw 'Begin with effective Dynamic and an awake display' }
 $result = [ordered]@{stage='starting';qpc_frequency=[Diagnostics.Stopwatch]::Frequency;start_qpc=[Diagnostics.Stopwatch]::GetTimestamp()}
+$extended=([DynamicPowerTest]::Read(254) -band 1) -ne 0
 [DynamicPowerTest]::Off()
 Start-Sleep -Seconds 2
 $result['off_samples_start']=[DynamicPowerTest]::Read(0)
+if($extended){$result['off_frames_start']=[DynamicPowerTest]::Read(8)}
 $result['off_timer']=[DynamicPowerTest]::Read(5)
 $result['off_paused']=[DynamicPowerTest]::Read(6)
 Start-Sleep -Seconds 3
 $result['off_samples_end']=[DynamicPowerTest]::Read(0)
+if($extended){$result['off_frames_end']=[DynamicPowerTest]::Read(8)}
 $result['off_passed']=($result.off_timer -eq 0 -and $result.off_paused -eq 1 -and $result.off_samples_start -eq $result.off_samples_end)
+if($extended){$result.off_passed=$result.off_passed -and $result.off_frames_start -eq $result.off_frames_end}
 $result.stage='off-observed-resume-with-real-input-now'
 $result | ConvertTo-Json | Set-Content -Encoding UTF8 $Output
 # Allow an actual console key to wake the display. No production power setting
 # is modified, and this test never prevents the display from sleeping.
 Start-Sleep -Seconds 20
 $result['resumed_samples']=[DynamicPowerTest]::Read(0)
+if($extended){$result['resumed_frames']=[DynamicPowerTest]::Read(8)}
 $result['resumed_timer']=[DynamicPowerTest]::Read(5)
 $result['resumed_paused']=[DynamicPowerTest]::Read(6)
 $result['resume_passed']=($result.resumed_timer -eq 1 -and $result.resumed_paused -eq 0 -and $result.resumed_samples -gt $result.off_samples_end)
