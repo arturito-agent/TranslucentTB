@@ -51,7 +51,10 @@ def summarize(rows, diagnostic):
 
 def dwm_cpu(auxiliary, start, end):
     """Interpolate cumulative CPU at common-QPC endpoints, with bounded gaps."""
-    rows = sorted((r for r in auxiliary if r.get("role") == "compositor" and number(r, "cpu_seconds") is not None),
+    if start["pid"] != end["pid"] or start["qpc_frequency"] != end["qpc_frequency"]:
+        raise ValueError("DWM endpoint identity or clock changed")
+    rows = sorted((r for r in auxiliary if r.get("role") == "compositor" and r["pid"] == start["pid"] and
+                   r["qpc_frequency"] == start["qpc_frequency"] and number(r, "cpu_seconds") is not None),
                   key=lambda r: int(r["qpc_ticks"]))
     ticks = [int(r["qpc_ticks"]) for r in rows]
 

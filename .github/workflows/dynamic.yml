@@ -31,7 +31,7 @@ jobs:
       - name: Validate GPU summary accounting
         shell: pwsh
         run: |
-          python -m unittest discover -s Tests/dynamic -p test_summarize_gpu.py -v
+          python -m unittest discover -s Tests/dynamic -p 'test_*.py' -v
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Exercise Windows PowerShell metric collector
         shell: powershell

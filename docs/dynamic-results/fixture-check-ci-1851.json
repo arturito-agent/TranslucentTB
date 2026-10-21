@@ -1,0 +1,38 @@
+{
+  "tools_commit": "1851bbf3684e2ec5cc235446e175e42fdef74853",
+  "workflow_run": "https://github.com/arturito-agent/TranslucentTB/actions/runs/39574972206",
+  "job_id": 119138132906,
+  "environment": "GitHub-hosted Windows Server 2025, Windows PowerShell 5.1",
+  "purpose": "Synthetic fixture compile, message protocol and lifecycle checks only",
+  "checks": [
+    {
+      "scenario": "Uniform",
+      "marker": 1180193793,
+      "ticks": 0,
+      "paints": 1,
+      "elapsed_ms": 2695,
+      "interval_ms": 0
+    },
+    {
+      "scenario": "Changing",
+      "marker": 1180193793,
+      "ticks": 53,
+      "paints": 54,
+      "elapsed_ms": 2527,
+      "interval_ms": 33
+    },
+    {
+      "scenario": "Interaction",
+      "marker": 1180193793,
+      "ticks": 53,
+      "paints": 55,
+      "elapsed_ms": 2546,
+      "interval_ms": 33
+    }
+  ],
+  "limits": [
+    "Not the local Windows 11 VM.",
+    "Animation ticks and paint callbacks are not presented frames.",
+    "No application CPU/RAM budget or backend comparison is established."
+  ]
+}

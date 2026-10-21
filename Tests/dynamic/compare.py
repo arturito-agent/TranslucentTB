@@ -25,6 +25,35 @@ def subtract_bracket(candidate, before, after):
     return candidate - (before + after) / 2
 
 
+def validate_receipt(path, rows, receipt, build, backend):
+    if (receipt.get("diagnostic_only") or receipt.get("warmup_seconds", 0) < 120 or
+            receipt.get("duration_seconds", 0) < 300):
+        raise ValueError("Missing full timing or diagnostic-only phase")
+    if (receipt.get("label") != path.stem or receipt.get("commit") != build["commit"] or
+            receipt.get("executable_sha256", "").lower() != build["sha256"].lower() or
+            any(row["commit"] != receipt["commit"] for row in rows)):
+        raise ValueError("Receipt does not match the pinned executable/commit")
+    target = sorted((row for row in rows if row["role"] == "target"), key=lambda row: int(row["qpc_ticks"]))
+    frequency = receipt["qpc_frequency"]
+    if (not target or any(int(row["pid"]) != receipt["pid"] or int(row["qpc_frequency"]) != frequency for row in rows if row["role"] == "target") or
+            int(target[0]["qpc_ticks"]) - receipt["start_qpc"] < receipt["warmup_seconds"]*frequency or
+            receipt["end_qpc"] < int(target[-1]["qpc_ticks"])):
+        raise ValueError("Target ownership, warmup or QPC bounds are inconsistent")
+    exit_receipt = json.loads(path.with_name(path.stem+"-exit.json").read_text(encoding="utf-8-sig"))
+    if exit_receipt != {"action": "Exit", "pid": receipt["pid"], "exited": True}:
+        raise ValueError("Missing verified graceful target exit")
+    if backend != "baseline":
+        for row in target:
+            if (row["dynamic_stats_available"] != "True" or row["capture_stats_available"] != "True" or
+                    row["dynamic_timer"] != "1" or row["dynamic_paused"] != "0" or int(row["captured_frames"]) < 1):
+                raise ValueError("Candidate was paused, stopped or not capturing")
+            if "-Static-" in path.stem and row["dynamic_rgb"] != "2121888":
+                raise ValueError("Static reference color is incorrect")
+        if (int(target[-1]["dynamic_samples"]) <= int(target[0]["dynamic_samples"]) or
+                target[-1]["capture_failures"] != target[0]["capture_failures"]):
+            raise ValueError("Candidate stopped progressing or capture failed")
+
+
 def load_phase(path, auxiliary):
     rows = read(path)
     if not rows:
@@ -62,7 +91,11 @@ def compare(directory, auxiliary):
     phases = {}
     receipts = {}
     gpu = {}
+    builds = json.loads((directory / "builds.json").read_text(encoding="utf-8-sig"))
+    if builds["gdi"]["commit"] != builds["dxgi"]["commit"]:
+        raise ValueError("Capture candidates must share the same application revision")
     setting = None
+    geometry = None
     for path in sorted(directory.glob("*.csv")):
         key, roles = load_phase(path, auxiliary)
         current = key[:2]
@@ -73,11 +106,13 @@ def compare(directory, auxiliary):
         if phase_key in phases:
             raise ValueError("Duplicate phase")
         receipt = json.loads(path.with_suffix(".json").read_text(encoding="utf-8-sig"))
-        if receipt.get("diagnostic_only") or receipt.get("warmup_seconds", 0) < 120:
-            raise ValueError("Missing full warmup or diagnostic-only phase")
         source_rows = read(path)
-        if receipt.get("label") != path.stem or any(row["commit"] != receipt.get("commit") for row in source_rows):
-            raise ValueError("Receipt label/commit does not match measurement")
+        validate_receipt(path, source_rows, receipt, builds[key[-1]], key[-1])
+        for row in source_rows:
+            current_geometry = tuple(row[field] for field in ("taskbar_dpi", "taskbar_left", "taskbar_top", "taskbar_right", "taskbar_bottom"))
+            if geometry is not None and current_geometry != geometry:
+                raise ValueError("Taskbar geometry/DPI changed within the suite")
+            geometry = current_geometry
         phases[phase_key] = (key[-1], roles)
         receipts[phase_key] = receipt
         if receipt.get("gpu_enabled"):
@@ -86,6 +121,17 @@ def compare(directory, auxiliary):
         raise ValueError("Expected all fifteen full phases")
     if gpu and len(gpu) != len(phases):
         raise ValueError("GPU collection must be consistent throughout a suite")
+    previous_end = None
+    fixture = None
+    for key in sorted(receipts):
+        receipt = receipts[key]
+        if previous_end is not None and receipt["start_qpc"] <= previous_end:
+            raise ValueError("Phase intervals overlap or are out of order")
+        previous_end = receipt["end_qpc"]
+        current_fixture = (receipt.get("fixture_sha256"), receipt.get("fixture_animation_interval_ms"), receipt.get("fixture_color_interval_ms"))
+        if fixture is not None and fixture != current_fixture:
+            raise ValueError("Fixture or nominal workload intervals changed within the suite")
+        fixture = current_fixture
     comparisons = []
     for repeat in range(1, 4):
         expected = ("baseline", "gdi", "baseline", "dxgi", "baseline") if repeat % 2 else ("baseline", "dxgi", "baseline", "gdi", "baseline")

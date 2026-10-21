@@ -210,8 +210,14 @@ values and refuses short/SMOKE data as benchmarks. Its optional DWM stream
 interpolates cumulative CPU at common QPC endpoints only when the observer
 brackets them with gaps of at most six seconds.
 `compare.py <suite-directory> --dwm-observer <observer.csv>` requires a complete
-fifteen-phase suite, real geometry matching its label, full durations/warmups
-and the alternating three-repeat order. It subtracts the arithmetic mean of
+fifteen-phase suite, fixed real geometry/DPI matching its label, full measured
+durations and QPC-verified warmups, and the alternating three-repeat order.
+Receipts must match the pinned build manifest and successful target exit. Both
+candidates must use one application revision, with unchanged fixture hash/nominal
+intervals throughout the suite. Candidate rows are rechecked for active sampling,
+progress, capture errors and the static reference color, even when a status file
+says complete. The elevated DWM stream must match the actual process identity
+and clock frequency at its interpolation endpoints. It subtracts the arithmetic mean of
 the adjacent baselines from each candidate, preserves negative differences and
 reports repetition values, medians and ranges. Combined CPU includes the app,
 Explorer, DWM and the optional taskbar helper; observer and workload costs stay

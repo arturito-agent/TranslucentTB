@@ -14,7 +14,8 @@ it when its appearance stops needing Dynamic. Previously, one shared DXGI
 instance would recreate its device/duplication each time sampling switched
 between outputs. Aggregate lifetime capture counters now survive destruction
 of those instances. Revision ad232a0 passes both Windows builds, 83 native tests
-and 2,021 portable checks; VM runtime validation of that worker remains pending.
+and 2,021 portable checks; current b46440a includes that ownership change and
+its live regression/color results are recorded below.
 Measurements for a1b05b5 must not be presented as measuring the revised worker.
 Multiple-display hardware is unavailable in this VM.
 
@@ -38,6 +39,19 @@ trials per backend on the real right classic taskbar all retain timer=1,
 paused=0, increasing attempts and zero IPC errors. Both backends also pass the
 six live color/continuity cases after the fix. These are diagnostic/functional
 results; full resource measurements and prolonged stability remain pending.
+
+The new full b46440a right/static series started at 09:03:42 UTC with GPU
+collection, three repetitions and the existing 120s/305s phase timing. It is
+still in progress. The original scripts remain fixed throughout that series.
+
+Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
+read-only counter queries, static/animated lifecycle checks, GPU accounting tests
+and an actual short collector/summary on a hosted Windows Server2025 runner.
+The [fixture receipt](dynamic-results/fixture-check-ci-1851.json) records zero
+static animation ticks and53ticks per animated case over about2.5seconds.
+These are callback counts, not presented frames or VM product resource results.
+The continuous-workload update still needs a local VM preflight after the active
+static series ends.
 
 ## Environment
 
