@@ -105,3 +105,13 @@ hash: five state cases per backend, each with five alternating stages. The
 sampler behavior, probe coordinates/class and foreground identity. This is
 classic right-taskbar integration evidence at 100%, not complete menu/battery
 saver/rule-form coverage or a resource measurement.
+
+`explorer-recovery-gdi-753a.json` records a real Explorer restart with the GDI
+app kept alive, resumed sampling/completed frames and exact blue taskbar
+rendering afterwards. A transient stop while the taskbar map is empty is
+retained. The receipt binds the same app PID and its graceful exit. It does
+not establish other positions or recovery scenarios.
+`explorer-recovery-dxgi-753a.json` now records the separate passing DXGI run,
+including 27 observations with an empty map and stopped sampler before recovery.
+The receipts retain first-observed-new-frame elapsed values, approximately
+5.8s GDI and 32.0s DXGI, with the single-trial/QPC/observer limitations stated.

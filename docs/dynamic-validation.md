@@ -149,6 +149,26 @@ pins the native revision and state helper hash. This verifies these cases on
 the real right classic taskbar at 100%; it does not establish all menus,
 battery saver, all rule forms, other positions or resource use.
 
+Current GDI also passes a real Explorer restart while the candidate app remains
+alive. It resumes active, unpaused sampling and exact blue taskbar rendering;
+attempts and frames advance from 9 to 102. One timer stop occurs while no
+taskbars are present, followed by recovery. The
+[receipt](dynamic-results/explorer-recovery-gdi-753a.json) includes its verified
+graceful app exit. The first DXGI recovery diagnostic aborts on an unavailable
+protocol observation immediately after restarting Explorer; it writes no
+recovery trajectory and establishes no result. That app exits gracefully and
+settings are restored. A separate diagnostic now retains unavailable interim
+queries, including their owner/status/error, and still requires valid final
+counters, resumed capture and the exact taskbar pixel. That separate DXGI run
+now passes, with 44 available protocol observations, attempts 8 to 48, completed
+frames 3 to 6, exact blue rendering and a verified graceful exit. Its
+[receipt](dynamic-results/explorer-recovery-dxgi-753a.json) retains 27 observations
+with an empty taskbar map and stopped timer before recovery. The first newly
+completed frame is observed about 32.0 seconds after the pre-restart snapshot,
+versus 5.8 seconds for GDI. These are single recovery trials with about one-second
+observation intervals, not latency percentiles or evidence of the cause of the
+original unavailable query. Recovery at left/bottom remains in progress.
+
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests
 and an actual short collector/summary on a hosted Windows Server2025 runner.

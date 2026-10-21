@@ -222,6 +222,22 @@ include the machine's monotonic QPC ticks/frequency for alignment. Guest wall
 clock configuration must be recorded separately. The CSV streams each observation
 batch so a failed long run retains diagnostic data. An existing output is rejected.
 The collector includes ExplorerPatcher's optional DWM helper when present.
+
+Run an actual Explorer recovery check outside resource measurements with
+`Tests/dynamic/recovery.ps1 -Manifest <absolute-builds.json> -OutputDirectory <new-output-directory> -Position Left`.
+The optional `-CaptureBackend gdi|dxgi|both` defaults to both; position accepts
+Left, Right or Bottom. Use the same manifest schema as the benchmark driver.
+The check preserves/restores candidate configuration, requires an awake owned
+Uniform fixture with a confirmed color distinct from fallback, and restarts
+Explorer while that candidate remains alive. It reapplies the pinned lateral
+position and refits the fixture, then requires resumed attempts/new completed
+frames, healthy counters and an exact physical taskbar background pixel.
+Interim missing protocol observations retain null values and status/error/owner;
+wrong identity or unavailable final counters fail. Its 35-second shell preparation
+and 45-second recovery observation are diagnostic controls, not resource timing
+or a general recovery-time guarantee. Results retain any transient stop while
+the taskbar map is empty. Test only an otherwise idle synthetic desktop.
+
 Benchmarks also record fixture and harness processes separately as test overhead.
 Use `benchmark.ps1 -IncludeGpu` (or `measure.ps1 -IncludeGpu`) for the next series
 on this VM, where GPU counters are available. The test-only PDH reader reuses
