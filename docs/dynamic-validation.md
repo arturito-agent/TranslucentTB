@@ -32,7 +32,7 @@ errors. The original spontaneous trigger was not recorded. Current source skips
 sampling during temporary attribute suppression and reconciles timers after
 restoring the previous suppression flag, including nested refreshes. The
 [negative control](dynamic-results/refresh-race-a1b0.json) and
-`Tests/dynamic/refresh-race.ps1` reproduce this mechanism. Fixed revision
+`Tests/dynamic/refresh-race.ps1` reproduce this mechanism. Revision with that fix
 `b46440a1f2feb5e5ce5538b7322bf1adbf60f7d2` passes both Windows builds with
 83 native tests and 2,021 portable checks each. Three six-second live regression
 trials per backend on the real right classic taskbar all retain timer=1,
@@ -40,9 +40,30 @@ paused=0, increasing attempts and zero IPC errors. Both backends also pass the
 six live color/continuity cases after the fix. These are diagnostic/functional
 results; full resource measurements and prolonged stability remain pending.
 
-The new full b46440a right/static series started at 09:03:42 UTC with GPU
-collection, three repetitions and the existing 120s/305s phase timing. It is
-still in progress. The original scripts remain fixed throughout that series.
+The new b46440a right/static series started at 09:03:42 UTC with GPU collection
+and the existing 120s/305s phase timing, but aborted in its first DXGI phase.
+The first measured observation after warmup reports timer=0, paused=0,
+44attempts,4frames,40timeouts and no capture failures. The early health gate
+retained that observation and stopped immediately; its GPU observation was
+never written. Three earlier phases form one completed GDI bracket, not three
+repetitions. Driver, target, fixture and auxiliary observer were closed and
+test settings restored. See the [failure receipt](dynamic-results/stopped-dxgi-b464.json).
+The spontaneous trigger remains unknown; the earlier controlled race passing
+does not prove this condition fixed.
+
+That single GDI bracket estimates combined additional CPU of0.277354%of one
+core: target0.074281%,Explorer0.012808%,DWM0.190265%. The point estimate exceeds
+the initial0.1%static target; it is not a completed budget assessment or backend
+selection. Combined private-commit difference is0.724609MiB. Retain all absolute
+phase trajectories and finish the repetitions before drawing final conclusions.
+
+A separate90second debug-logging follow-up retained91observations, all timer=1,
+paused=0, with advancing attempts and no capture failures. The live configuration
+remained Dynamic; its private debug log records only the initial state reset.
+This failed to reproduce the intermittent stop and establishes no repair.
+Latest source adds opt-in scalar scheduler snapshots to distinguish missing
+taskbars, temporary suppression, configuration changes and timer creation
+failures in the next diagnostic. It is instrumentation, not a new fix.
 
 Test-tool revision1851bbf separately passes Windows PowerShell fixture compilation,
 read-only counter queries, static/animated lifecycle checks, GPU accounting tests
@@ -50,8 +71,11 @@ and an actual short collector/summary on a hosted Windows Server2025 runner.
 The [fixture receipt](dynamic-results/fixture-check-ci-1851.json) records zero
 static animation ticks and53ticks per animated case over about2.5seconds.
 These are callback counts, not presented frames or VM product resource results.
-The continuous-workload update still needs a local VM preflight after the active
-static series ends.
+The continuous-workload update still needs a local VM preflight after the
+intermittent-stop investigation. Tool revision4fb2266 also passes the compile-only
+shell helper/INPUT layout check, all8Python analysis checks, actual short metric
+collection and2021portable checks on Windows CI; live shell/browser checks remain
+pending on the local VM.
 
 ## Environment
 

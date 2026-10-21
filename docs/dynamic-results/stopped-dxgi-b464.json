@@ -1,0 +1,34 @@
+{
+  "application_commit": "b46440a1f2feb5e5ce5538b7322bf1adbf60f7d2",
+  "executable_sha256": "3f57309b92c3d43b2d195d7621b8ad62d1eb17d5cac5dab3bcdad5bdb13d5039",
+  "collector_commit": "ae9328ebd4a8931efc1e3a8a12ff746b2f08aa2c",
+  "label": "Right-Static-r1-p3-dxgi",
+  "warmup_seconds": 120,
+  "planned_duration_seconds": 305,
+  "closed_phases_before_failure": 3,
+  "target_observations_before_abort": 1,
+  "failed_observation": {
+    "dynamic_samples": 44,
+    "captured_frames": 4,
+    "capture_timeouts": 40,
+    "capture_failures": 0,
+    "dynamic_rgb": 2121888,
+    "dynamic_timer": 0,
+    "dynamic_paused": 0,
+    "qpc_ticks": 184749226618,
+    "qpc_frequency": 10000000,
+    "taskbar_dpi": 96,
+    "taskbar_left": 1218,
+    "taskbar_top": 0,
+    "taskbar_right": 1280,
+    "taskbar_bottom": 800,
+    "elapsed_measured_seconds": 0.0015606
+  },
+  "diagnostic_conclusion": "Sampler stopped without a paused flag. Spontaneous trigger unknown.",
+  "gpu_record_for_failed_batch": "Absent: RequireDynamic throws before GPU write.",
+  "cleanup": "Driver, target, fixture and separate DWM observer confirmed closed; original test settings restored.",
+  "limits": [
+    "Aborted suite; not a complete three-repeat comparison.",
+    "The earlier controlled refresh-race passing does not prove this condition fixed."
+  ]
+}

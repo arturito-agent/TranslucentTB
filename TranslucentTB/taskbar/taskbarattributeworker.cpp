@@ -336,7 +336,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		switch (wParam)
 		{
 		case 255: return 0x44594E01; // Distinguish missing telemetry from valid zero counts.
-		case 254: return 1; // Extended capture-counter capability.
+		case 254: return 3; // Capture counters and opt-in scheduler diagnostics.
 		case 0: return static_cast<LRESULT>(m_DynamicSamples);
 		case 1: return static_cast<LRESULT>(m_DynamicChanges);
 		case 2: return static_cast<LRESULT>(m_DynamicApplications);
@@ -348,6 +348,17 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		case 8: return static_cast<LRESULT>(m_DynamicFrames);
 		case 9: return static_cast<LRESULT>(m_DynamicTimeouts);
 		case 10: return static_cast<LRESULT>(m_DynamicFailures);
+		case 11: return DynamicSchedulerFlags();
+		case 12: return static_cast<LRESULT>(m_Taskbars.size());
+		case 13: return m_DynamicLastStopEntryFlags;
+		case 14: return m_DynamicLastStopFlags;
+		case 15: return static_cast<LRESULT>(m_DynamicLastStopTick);
+		case 16: return m_DynamicLastStopTaskbars;
+		case 17: return static_cast<LRESULT>(m_DynamicLastStopDesktop);
+		case 18: return m_DynamicTimerError;
+		case 19: return static_cast<LRESULT>(m_ConfigManager.GetConfig().DesktopAppearance.Accent);
+		case 20: return static_cast<LRESULT>(m_DynamicStops);
+		case 21: return static_cast<LRESULT>(m_DynamicTimerFailures);
 		default: return 0;
 		}
 	}
@@ -732,8 +743,17 @@ void TaskbarAttributeWorker::RefreshAllAttributes()
 	}
 }
 
+std::uint32_t TaskbarAttributeWorker::DynamicSchedulerFlags() const noexcept
+{
+	return (m_DynamicLocked ? 1u : 0u) | (m_DynamicDisplayOff ? 2u : 0u) |
+		(m_disableAttributeRefreshReply ? 4u : 0u) | (m_ResettingState ? 8u : 0u) |
+		(m_DynamicSampling ? 16u : 0u) | (m_Taskbars.empty() ? 32u : 0u) |
+		(m_ConfigManager.GetConfig().DesktopAppearance.Accent != AppearanceAccent::Dynamic ? 64u : 0u);
+}
+
 void TaskbarAttributeWorker::UpdateDynamicTimer()
 {
+	const auto flagsAtEntry = DynamicSchedulerFlags();
 	bool needed = false;
 	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
@@ -748,11 +768,20 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 	}
 	if (needed && !m_DynamicTimer)
 	{
+		SetLastError(ERROR_SUCCESS);
 		m_DynamicTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_TIMER, 500, nullptr, 50) != 0;
+		m_DynamicTimerError = m_DynamicTimer ? ERROR_SUCCESS : GetLastError();
+		if (!m_DynamicTimer) ++m_DynamicTimerFailures;
 		RequestDynamicFocusSample();
 	}
 	else if (!needed && m_DynamicTimer)
 	{
+		m_DynamicLastStopEntryFlags = flagsAtEntry;
+		m_DynamicLastStopFlags = DynamicSchedulerFlags();
+		m_DynamicLastStopTick = GetTickCount64();
+		m_DynamicLastStopTaskbars = static_cast<std::uint32_t>(m_Taskbars.size());
+		m_DynamicLastStopDesktop = m_ConfigManager.GetConfig().DesktopAppearance.Accent;
+		++m_DynamicStops;
 		KillTimer(m_WindowHandle, DYNAMIC_TIMER);
 		m_DynamicTimer = false;
 	}

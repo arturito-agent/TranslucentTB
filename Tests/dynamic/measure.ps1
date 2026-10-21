@@ -10,6 +10,7 @@ param(
     [string] $Commit = '',
     [switch] $SystemOnly,
     [switch] $IncludeGpu,
+    [switch] $IncludeScheduler,
     [switch] $RequireDynamic
 )
 $ErrorActionPreference = 'Stop'
@@ -106,6 +107,7 @@ while ($true) {
     $window = [DynamicMetrics]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow')
     $supportsStats = $window -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($window,$message,255) -eq 0x44594E01
     $captureStats = $supportsStats -and ([DynamicMetrics]::Read($window,$message,254) -band 1) -ne 0
+    $schedulerStats = $IncludeScheduler -and $supportsStats -and ([DynamicMetrics]::Read($window,$message,254) -band 2) -ne 0
     $fixtureWindow = [DynamicMetrics]::Fixture($WorkloadProcessId)
     $fixtureStats = $fixtureWindow -ne [IntPtr]::Zero -and [DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,255) -eq 0x46585401
     $processes = @(if ($SystemOnly) { Get-Process -Name dwm,ep_dwm_svc -ErrorAction SilentlyContinue }
@@ -148,6 +150,18 @@ while ($true) {
             captured_frames=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,8)}else{$null})
             capture_timeouts=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,9)}else{$null})
             capture_failures=$(if($dynamic -and $captureStats){[DynamicMetrics]::Read($window,$message,10)}else{$null})
+            scheduler_stats_available=($dynamic -and $schedulerStats)
+            scheduler_flags=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,11)}else{$null})
+            scheduler_taskbars=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,12)}else{$null})
+            scheduler_stop_entry_flags=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,13)}else{$null})
+            scheduler_stop_flags=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,14)}else{$null})
+            scheduler_stop_tick=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,15)}else{$null})
+            scheduler_stop_taskbars=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,16)}else{$null})
+            scheduler_stop_desktop=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,17)}else{$null})
+            scheduler_timer_error=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,18)}else{$null})
+            scheduler_desktop=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,19)}else{$null})
+            scheduler_stops=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,20)}else{$null})
+            scheduler_timer_failures=$(if($dynamic -and $schedulerStats){[DynamicMetrics]::Read($window,$message,21)}else{$null})
             fixture_stats_available=$isFixture
             fixture_animation_ticks=$(if($isFixture){[DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,0)}else{$null})
             fixture_paints=$(if($isFixture){[DynamicMetrics]::Read($fixtureWindow,$fixtureMessage,1)}else{$null})

@@ -47,3 +47,8 @@ checks on GitHub-hosted Windows Server 2025. Uniform has zero animation ticks;
 Changing and Interaction produce repeated paints at a nominal33ms timer interval.
 Counts describe callbacks, not monitor presentation. This checks test tooling
 only and establishes no application resource result or local VM preflight.
+
+`stopped-dxgi-b464.json` retains the first invalid target observation from the
+new full series. Sampling stopped during warmup without a paused flag or capture
+failure. The collector aborted before writing that batch's GPU stream. This is
+failure evidence, not a passing result, complete comparison or established cause.

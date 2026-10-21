@@ -281,6 +281,29 @@ survive resource resets. A timeout may reuse a cached result and is not a new
 captured frame. The collector distinguishes attempts from completed frames and
 leaves extended fields empty for older revisions.
 
+Capability bit 1 enables bounded scheduler diagnostics. `measure.ps1
+-IncludeScheduler` opts into those extra queries for diagnostic sessions;
+ordinary resource suites do not query them. The application retains scalar
+snapshots and counters, with no continuous file logging or new polling thread.
+
+| Field | Scheduler diagnostic |
+| --- | --- |
+| 11 / 12 | Current context flags / taskbar-map size |
+| 13 / 14 | Context at entry to the last stopping update / immediately before stopping |
+| 15 / 16 | Last stop GetTickCount64 / taskbar-map size at that stop |
+| 17 / 19 | Desktop appearance at last stop / current Desktop appearance |
+| 18 | Last regular-timer creation error |
+| 20 / 21 | Regular-timer stop count / timer creation failure count |
+
+Context bits are locked=1, display-off=2, attribute replies suppressed=4,
+state reset in progress=8, sampling in progress=16, empty taskbar map=32 and
+Desktop configured with another appearance=64. These are context, not a list of
+independent stop reasons: another state can legitimately select Dynamic while
+Desktop uses Clear. Appearance values are Normal=0, Opaque=1, Clear=2, Blur=3,
+Acrylic=4 and Dynamic=5. A zero last-error value does not override a nonzero
+timer creation failure count. The diagnostic addition does not change timer
+selection/capture policy or claim to fix the remaining intermittent stop.
+
 For XAML taskbars, Dynamic also requests the light/dark theme with greater
 black/white contrast on that taskbar's XAML root. The chosen RGB is unchanged.
 The original local theme is restored on mode changes, exit and process death.
