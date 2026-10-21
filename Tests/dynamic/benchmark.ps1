@@ -164,6 +164,7 @@ try {
                 }
                 if ([uint64]$targetRows[-1].dynamic_samples -le [uint64]$targetRows[0].dynamic_samples -or
                     [uint64]$targetRows[-1].capture_failures -ne [uint64]$targetRows[0].capture_failures) { throw "Capture stopped or failed during measurement: $label" }
+                if ($Workload -ne 'Static' -and [uint64]$targetRows[-1].captured_frames -le [uint64]$targetRows[0].captured_frames) { throw "Changing workload produced no new captured frames: $label" }
             }
             $receipt['end_qpc'] = [Diagnostics.Stopwatch]::GetTimestamp()
             Exit-Target $target $targetPath (Join-Path $OutputDirectory "$label-exit.json")

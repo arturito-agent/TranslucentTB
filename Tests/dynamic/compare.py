@@ -52,6 +52,9 @@ def validate_receipt(path, rows, receipt, build, backend):
         if (int(target[-1]["dynamic_samples"]) <= int(target[0]["dynamic_samples"]) or
                 target[-1]["capture_failures"] != target[0]["capture_failures"]):
             raise ValueError("Candidate stopped progressing or capture failed")
+        if (any(f"-{workload}-" in path.stem for workload in ("Changing", "Interaction")) and
+                int(target[-1]["captured_frames"]) <= int(target[0]["captured_frames"])):
+            raise ValueError("Changing workload produced no new captured frames")
 
 
 def load_phase(path, auxiliary):

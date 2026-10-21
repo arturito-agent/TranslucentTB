@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from compare import compare
+from compare import compare, validate_receipt
 from summarize import dwm_cpu
 
 
@@ -102,6 +102,26 @@ class ComparisonTests(unittest.TestCase):
         self.write_json("builds.json", manifest)
         with self.assertRaises(ValueError):
             compare(self.root, [])
+
+    def test_frame_progress_is_required_for_changing_content_but_not_static(self):
+        label = self.labels[3]
+        with (self.root/(label+".csv")).open() as stream:
+            rows = list(csv.DictReader(stream))
+        receipt = json.loads((self.root/(label+".json")).read_text())
+        build = json.loads((self.root/"builds.json").read_text())["dxgi"]
+        target = [row for row in rows if row["role"] == "target"]
+        target[-1]["captured_frames"] = target[0]["captured_frames"]
+        # DXGI may return only timeouts when an unchanged desktop has no new frames.
+        validate_receipt(self.root/(label+".csv"), rows, receipt, build, "dxgi")
+        for workload in ("Changing", "Interaction"):
+            changed = label.replace("Static", workload)
+            candidate_rows = [dict(row, label=changed) for row in rows]
+            candidate_receipt = dict(receipt, label=changed)
+            self.write_json(changed+"-exit.json", json.loads((self.root/(label+"-exit.json")).read_text()))
+            with self.assertRaisesRegex(ValueError, "no new captured frames"):
+                validate_receipt(self.root/(changed+".csv"), candidate_rows, candidate_receipt, build, "dxgi")
+            [row for row in candidate_rows if row["role"] == "target"][-1]["captured_frames"] = str(int(target[0]["captured_frames"])+600)
+            validate_receipt(self.root/(changed+".csv"), candidate_rows, candidate_receipt, build, "dxgi")
 
     def test_dwm_observer_must_match_the_measured_process(self):
         auxiliary = [{"role": "compositor", "pid": "99", "qpc_ticks": str(tick), "qpc_frequency": "1000", "cpu_seconds": str(tick/1000)}
