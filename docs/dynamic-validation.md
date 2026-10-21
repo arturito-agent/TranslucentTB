@@ -2,6 +2,14 @@
 
 Experimental results as of 2026-10-21; the experiment is incomplete.
 
+Current first-version functional closure on e4f09c8 passes all three mandatory
+positions with each capture backend retaining the same process through
+Bottom → Left → Right. The 36 exact-color cases and 30 Maximized Clear / Desktop
+Dynamic stages are recorded in [the live-move receipt](dynamic-results/live-moves-e4f0.json).
+Inactive stages show unchanged attempts and frames, a stopped capture timer and
+no queued discovery timer. Both targets exit gracefully. These checks do not
+establish resource budgets, contrast or prolonged stability.
+
 Application revisions: upstream baseline
 `7d644774045429a98c07678df553b771e3b5d129`, initial native validation
 `3ea6890f1a7bf11b1b6bd8b44b6c819778458cb1`, lateral GDI/DXGI validation

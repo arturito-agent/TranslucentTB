@@ -10,6 +10,15 @@ No private application data, authentication or host paths are included.
 See [environment and limitations](../dynamic-validation.md) before interpreting
 the results. A passing color row does not verify glyph contrast or every state.
 
+`live-moves-e4f0.json` and `functional-live-*.csv` / `states-live-*.csv` record
+the current e4f09c8 application moving Bottom → Left → Right while retaining
+one owned process per capture backend. All 36 exact-color cases and 30
+Maximized Clear / Desktop Dynamic stages pass. During each measured inactive
+stage, attempts and completed frames do not advance, the capture timer is
+stopped, and the bounded discovery timer is not queued. Both owned application
+processes exit gracefully. These short functional checks establish neither
+resource budgets nor the rare delayed-discovery recovery branch.
+
 `functional-*.csv` compares the expected color, worker's confirmed RGB and a
 physical pixel on the real taskbar. RGB values are decimal 0xRRGGBB. `captures`
 in these early fixtures means sampling **attempts**, not completed DXGI frames.

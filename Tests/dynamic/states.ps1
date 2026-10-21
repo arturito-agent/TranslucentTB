@@ -114,7 +114,7 @@ if($shellCase -and ($ExpectedProcessId -le 0 -or -not [DynamicStateTest]::OwnsWo
 # resource measurements, on an awake/unlocked console. These cases use real
 # shell keyboard shortcuts, never registered-message state injection.
 $stages=@($true,$false,$true,$false,$true)
-$script:stage=0;$script:started=$false;$script:baseline=$null;$script:failure=$null
+$script:stage=0;$script:started=$false;$script:baseline=$null;$script:framesBaseline=$null;$script:failure=$null
 $script:shellWasRequested=$false
 $script:rows=New-Object 'System.Collections.Generic.List[object]'
 $form=New-Object DynamicFixture -ArgumentList 'Uniform',$false
@@ -124,7 +124,7 @@ $timer=New-Object System.Windows.Forms.Timer
 $timer.Interval=100
 $timer.Add_Tick({
     try {
-        if($shellCase -and -not [DynamicStateTest]::OwnsWorker($ExpectedProcessId)){throw 'Worker ownership changed'}
+        if($ExpectedProcessId -gt 0 -and -not [DynamicStateTest]::OwnsWorker($ExpectedProcessId)){throw 'Worker ownership changed'}
         if(-not $script:started) {
             $dynamic=$stages[$script:stage]
             if($Case -eq 'MaximizedClear') {
@@ -148,10 +148,12 @@ $timer.Add_Tick({
             $clock.Restart();$script:started=$true;$script:baseline=$null
             return
         }
-        if($clock.Elapsed.TotalSeconds -ge 2 -and $null -eq $script:baseline){$script:baseline=[DynamicStateTest]::Read(0)}
+        if($clock.Elapsed.TotalSeconds -ge 2 -and $null -eq $script:baseline){$script:baseline=[DynamicStateTest]::Read(0);$script:framesBaseline=[DynamicStateTest]::Read(8)}
         if($clock.Elapsed.TotalSeconds -lt 4){return}
         $dynamic=$stages[$script:stage]
         $samples=[DynamicStateTest]::Read(0);$active=[DynamicStateTest]::Read(5);$rgb=[DynamicStateTest]::Read(3)
+        $frames=[DynamicStateTest]::Read(8)
+        $discoveryQueue=if(([DynamicStateTest]::Read(254) -band 4) -ne 0){[DynamicStateTest]::Read(23)}else{$null}
         $probe=[DynamicStateTest]::TaskbarProbe()
         $pixel=$probe.Rgb
         $changes=[DynamicStateTest]::Read(1)
@@ -162,7 +164,9 @@ $timer.Add_Tick({
         # legitimately uses the known fallback until the first confirmed color.
         $passed=if($dynamic){$active -eq 1 -and $samples -gt $script:baseline -and $pixel -eq $expectedRgb}else{$active -eq 0 -and $samples -eq $script:baseline}
         if($Case -eq 'MaximizedClear'){$passed=$passed -and ($isMaximized -eq (-not $dynamic))}
-        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;taskbar_probe_x=$probe.X;taskbar_probe_y=$probe.Y;taskbar_probe_class=$probe.WindowClass;maximized=$isMaximized;title=$form.Text;foreground_class=[DynamicStateTest]::ForegroundClass();foreground_pid=[DynamicStateTest]::ForegroundPid();expected_worker_pid=$ExpectedProcessId;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
+        if(-not $dynamic){$passed=$passed -and $frames -eq $script:framesBaseline -and ($null -eq $discoveryQueue -or $discoveryQueue -eq 0)}
+        $capture=[pscustomobject]@{frames_start=$script:framesBaseline;frames_end=$frames;discovery_queued=$discoveryQueue}
+        $script:rows.Add([pscustomobject]@{case=$Case;stage=$script:stage;frames_start=$capture.frames_start;frames_end=$capture.frames_end;discovery_queued=$capture.discovery_queued;expected_dynamic=$dynamic;timer=$active;samples_start=$script:baseline;samples_end=$samples;confirmed_rgb=$rgb;confirmed_changes=$changes;expected_taskbar_rgb=$expectedRgb;taskbar_pixel_rgb=$pixel;taskbar_probe_x=$probe.X;taskbar_probe_y=$probe.Y;taskbar_probe_class=$probe.WindowClass;maximized=$isMaximized;title=$form.Text;foreground_class=[DynamicStateTest]::ForegroundClass();foreground_pid=[DynamicStateTest]::ForegroundPid();expected_worker_pid=$ExpectedProcessId;passed=$passed;qpc_ticks=[Diagnostics.Stopwatch]::GetTimestamp();qpc_frequency=[Diagnostics.Stopwatch]::Frequency})
         $script:rows | Export-Csv -LiteralPath $Output -Encoding UTF8 -NoTypeInformation
         $script:stage++;$script:started=$false
         if($script:stage -ge $stages.Count){$form.Close()}

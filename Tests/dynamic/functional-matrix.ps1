@@ -1,7 +1,8 @@
 param(
  [Parameter(Mandatory=$true)][string]$Manifest,
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
- [ValidateSet('Left','Right','Bottom')][string[]]$Positions=@('Left','Bottom')
+ [ValidateSet('Left','Right','Bottom')][string[]]$Positions=@('Bottom','Left','Right'),
+ [switch]$LiveMoves
 )
 $ErrorActionPreference='Stop'
 if($Positions.Count -lt 1 -or $Positions.Count -ne @($Positions|Sort-Object -Unique).Count){throw 'Choose distinct positions'}
@@ -42,7 +43,7 @@ try{
  foreach($backend in 'gdi','dxgi'){
   $build=$builds.$backend
   $path=Join-Path (Split-Path -Parent $build.executable) 'settings.json'
-  @{desktop_appearance=@{accent='dynamic';color='#203040FF'};visible_window_appearance=@{enabled=$false};maximized_window_appearance=@{enabled=$false};start_opened_appearance=@{enabled=$false};search_opened_appearance=@{enabled=$false};task_view_opened_appearance=@{enabled=$false};battery_saver_appearance=@{enabled=$false}}|ConvertTo-Json -Depth 8|Set-Content -Encoding UTF8 $path
+  @{desktop_appearance=@{accent='dynamic';color='#203040FF'};visible_window_appearance=@{enabled=$false};maximized_window_appearance=@{enabled=[bool]$LiveMoves;accent='clear'};start_opened_appearance=@{enabled=$false};search_opened_appearance=@{enabled=$false};task_view_opened_appearance=@{enabled=$false};battery_saver_appearance=@{enabled=$false}}|ConvertTo-Json -Depth 8|Set-Content -Encoding UTF8 $path
   Get-Process explorer -ErrorAction SilentlyContinue|Stop-Process
   Start-Sleep -Seconds 2
   if(-not(Get-Process explorer -ErrorAction SilentlyContinue)){Start-Process explorer.exe|Out-Null}
@@ -51,7 +52,7 @@ try{
    Set-ExperimentTaskbarPosition $position
    $orientation=if($position -eq 'Bottom'){'Horizontal'}else{'Vertical'}
    $label="$position-$backend"
-   $target=Start-Process -FilePath $build.executable -WorkingDirectory (Split-Path -Parent $build.executable) -PassThru
+   if(-not $target){$target=Start-Process -FilePath $build.executable -WorkingDirectory (Split-Path -Parent $build.executable) -PassThru}
    $clock=[Diagnostics.Stopwatch]::StartNew()
    while(-not [DynamicBenchmark]::WorkerReady($target.Id,$true,$true)){
     if($target.HasExited -or $clock.Elapsed.TotalSeconds -gt 10){throw 'Owned Dynamic worker unavailable'}
@@ -59,7 +60,7 @@ try{
    }
    $bar=[DynamicMetrics]::ReadTaskbar()
    if(-not $bar -or $bar.Edge -ne $position){throw 'Wrong real taskbar edge'}
-   $receipt=[ordered]@{backend=$backend;position=$position;commit=$build.commit;executable_sha256=$build.sha256;pid=$target.Id;diagnostic_only=$true;geometry=$bar}
+   $receipt=[ordered]@{backend=$backend;position=$position;commit=$build.commit;executable_sha256=$build.sha256;pid=$target.Id;diagnostic_only=$true;live_moves=[bool]$LiveMoves;geometry=$bar}
    $receipt|ConvertTo-Json -Depth 4|Set-Content -Encoding UTF8 (Join-Path $folder 'current.json')
    $csv=Join-Path $folder ($label+'.csv')
    $test=Child "try { & $(Quote-PS (Join-Path $root 'functional.ps1')) -Output $(Quote-PS $csv) -Orientation $orientation } catch { `$_|Out-String|Set-Content -Encoding UTF8 $(Quote-PS (Join-Path $folder ($label+'-error.txt')));exit 1 }"
@@ -70,9 +71,18 @@ try{
     if($row.expected_rgb -ne $row.confirmed_rgb -or $row.expected_rgb -ne $row.taskbar_pixel_rgb){throw 'Incorrect physical taskbar color'}
     if([int]$row.taskbar_left -ne $bar.Left -or [int]$row.taskbar_top -ne $bar.Top -or [int]$row.taskbar_right -ne $bar.Right -or [int]$row.taskbar_bottom -ne $bar.Bottom){throw 'Taskbar geometry changed'}
    }
-   Exit-Owned $label;$target=$null;$test=$null
+   $test=$null
+   if($LiveMoves){
+    $stateCsv=Join-Path $folder ($label+'-inactive.csv')
+    $test=Child "try { & $(Quote-PS (Join-Path $root 'states.ps1')) -Output $(Quote-PS $stateCsv) -Case MaximizedClear -ExpectedProcessId $($target.Id) } catch { `$_|Out-String|Set-Content -Encoding UTF8 $(Quote-PS (Join-Path $folder ($label+'-inactive-error.txt')));exit 1 }"
+    if(-not $test.WaitForExit(40000) -or $test.ExitCode -ne 0){throw "Inactive transitions failed: $label"}
+    $states=@(Import-Csv -LiteralPath $stateCsv)
+    if($states.Count -ne 5 -or @($states|Where-Object passed -ne 'True').Count){throw 'Missing passing inactive stages'}
+    $test=$null
+   }else{Exit-Owned $label;$target=$null}
    $receipt|ConvertTo-Json -Depth 4|Set-Content -Encoding UTF8 (Join-Path $folder ($label+'.json'))
   }
+  if($LiveMoves){Exit-Owned ($backend+'-live-moves');$target=$null}
  }
  'complete'|Set-Content -Encoding UTF8 (Join-Path $folder 'status.txt')
 }catch{$failure=$_.ToString();$failure|Set-Content -Encoding UTF8 (Join-Path $folder 'error.txt')}

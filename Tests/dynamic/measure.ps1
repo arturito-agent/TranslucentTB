@@ -7,6 +7,7 @@ param(
     [int] $TargetProcessId = 0,
     [int] $WorkloadProcessId = 0,
     [int] $HarnessProcessId = 0,
+    [string] $StopFile = '',
     [string] $Commit = '',
     [switch] $SystemOnly,
     [switch] $IncludeGpu,
@@ -16,6 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($WarmupSeconds -lt 0 -or $DurationSeconds -lt 1 -or $IntervalSeconds -lt 1) { throw 'Invalid interval' }
 if ($RequireDynamic -and $TargetProcessId -le 0) { throw 'RequireDynamic needs an explicit target PID' }
+if ($StopFile -and (-not $SystemOnly -or (Test-Path -LiteralPath $StopFile))) { throw 'Use a new stop-file path for the separate system observer only' }
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -194,7 +196,7 @@ while ($true) {
         }
     }
     if ($gpu) { Write-DynamicGpuObservation $gpu $rows $gpuOutput $Label $Commit }
-    if ($elapsed -ge $DurationSeconds) { break }
+    if ($elapsed -ge $DurationSeconds -or ($StopFile -and (Test-Path -LiteralPath $StopFile))) { break }
     do { $deadline += $IntervalSeconds } while ($deadline -le $watch.Elapsed.TotalSeconds)
     $remaining = [Math]::Min($deadline,$DurationSeconds) - $watch.Elapsed.TotalSeconds
     if ($remaining -gt 0) { Start-Sleep -Milliseconds ([int][Math]::Ceiling($remaining * 1000)) }
