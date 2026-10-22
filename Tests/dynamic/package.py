@@ -52,7 +52,7 @@ def main():
     public_build["documentation_commit"] = documentation_commit
     files["BUILD.json"] = (json.dumps(public_build, indent=2) + "\n").encode()
     files["README.md"] = (
-        "# TranslucentTB Dynamic experiment\n\n"
+        "# TranslucentTB Chameleon\n\n"
         "Read [installation and use](docs/dynamic-install.md) before running.\n\n"
         f"Native source: https://github.com/arturito-agent/TranslucentTB/tree/{metadata['commit']}\n\n"
         f"Capture backend: {metadata['backend']}. See BUILD.json and SHA256SUMS.\n"
@@ -63,7 +63,7 @@ def main():
     # Fixed entry timestamps and ordering make identical inputs reproducible.
     with zipfile.ZipFile(args.output, "x", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, data in sorted(files.items()):
-            entry = zipfile.ZipInfo("TranslucentTB-Dynamic/" + name, (2026, 1, 1, 0, 0, 0))
+            entry = zipfile.ZipInfo("TranslucentTB-Chameleon/" + name, (2026, 1, 1, 0, 0, 0))
             entry.compress_type = zipfile.ZIP_DEFLATED
             entry.external_attr = 0o100644 << 16
             archive.writestr(entry, data)

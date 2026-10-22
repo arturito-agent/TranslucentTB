@@ -1,5 +1,9 @@
 # Dynamic v2: event-driven maximized appearance
 
+> Historical experiment report. As of 2026-10-22, periodic Dynamic is named
+> **Chameleon** and event-driven Dynamic v2 is removed. See [current behavior](chameleon.md).
+
+
 Dynamic v2 is available only under **Maximized window → Enabled → Dynamic v2**.
 The original Dynamic option remains available for comparison. JSON uses
 `"accent": "dynamic_v2"` in `maximized_window_appearance`. Elsewhere, an invalid

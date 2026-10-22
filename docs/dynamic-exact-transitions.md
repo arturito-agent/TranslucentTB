@@ -1,5 +1,9 @@
 # Exact color, bounded transitions and capture strategy
 
+> Historical experiment report. As of 2026-10-22, periodic Dynamic is named
+> **Chameleon** and event-driven Dynamic v2 is removed. See [current behavior](chameleon.md).
+
+
 This update keeps the existing Dynamic (periodic) and Dynamic v2 (event-driven,
 Maximized window only) menu entries. This report distinguishes the current exact-color validation from historical
 v0.2.0 measurements.

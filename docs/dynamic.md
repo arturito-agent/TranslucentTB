@@ -1,5 +1,9 @@
 # Dynamic appearance (experimental)
 
+> Historical experiment report. As of 2026-10-22, periodic Dynamic is named
+> **Chameleon** and event-driven Dynamic v2 is removed. See [current behavior](chameleon.md).
+
+
 Dynamic is a native appearance option alongside Normal, Opaque, Clear, Blur and
 Acrylic. Select it separately for Desktop, Visible window, Maximized window,
 Start opened, Search opened, Task View opened or Battery saver. Existing

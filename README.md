@@ -1,9 +1,10 @@
-# TranslucentTB Dynamic experiment
+# TranslucentTB Chameleon
 
-Experimental fork adding Dynamic and **Dynamic v2** to the native appearance selector.
-Dynamic v2 is event-driven and available only in **Maximized window**.
-See [installation](docs/dynamic-install.md), [v2 behavior and approximate resource use](docs/dynamic-v2.md),
-and [the original experiment](docs/dynamic.md).
+Experimental fork adding **Chameleon** to the native appearance selector.
+Chameleon keeps the original periodic Dynamic capture behavior; the event-driven
+Dynamic v2 mode has been removed. It reads the exact adjacent edge color and
+uses short smooth transitions. See [installation](docs/dynamic-install.md) and
+[Chameleon behavior](docs/chameleon.md).
 
 ---
 
