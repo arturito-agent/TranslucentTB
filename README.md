@@ -1,10 +1,10 @@
 # TranslucentTB Chameleon
 
-Experimental fork adding **Chameleon** to the native appearance selector.
-Chameleon keeps the original periodic Dynamic capture behavior; the event-driven
-Dynamic v2 mode has been removed. It reads the exact adjacent edge color and
-uses short smooth transitions. See [installation](docs/dynamic-install.md) and
-[Chameleon behavior](docs/chameleon.md).
+Experimental fork with **Chameleon (continuous)** and **Chameleon (trigger based)**.
+The continuous mode follows content using periodic capture; the trigger based
+mode is available in Maximized window and samples only after a responsible window
+or geometry change. Both read exact adjacent RGB and use short smooth transitions.
+See [installation](docs/dynamic-install.md) and [Chameleon behavior](docs/chameleon.md).
 
 ---
 

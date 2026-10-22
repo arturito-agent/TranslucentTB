@@ -26,16 +26,21 @@ TranslucentTB instance.
 
 1. Exit the old TranslucentTB instance, then extract the complete new ZIP.
 2. Run `TranslucentTB.exe` as the ordinary desktop user.
-3. Open the tray menu and choose **Chameleon** under the state you want, for
-   example **Maximized window → Enabled → Chameleon** or **Desktop → Chameleon**.
+3. Choose **Chameleon (continuous)** in any appearance submenu, or enable
+   **Maximized window → Chameleon (trigger based)**.
 4. Other enabled states and application rules keep their normal precedence.
 5. Fallback color sets the initial opaque color until a stable sample is confirmed.
 
-Chameleon is the original periodic mode, renamed. It samples approximately every
-500 ms while effective and includes stable silent content changes. Dynamic v2 has
-been removed. Existing `dynamic` and `dynamic_v2` settings load as Chameleon;
-future saves use `chameleon`. Copy your existing settings.json into the new
-portable folder if you want to retain that configuration.
+Continuous samples approximately every 500 ms and follows stable silent paints.
+Trigger based samples after changes of the responsible maximized window or
+monitor/taskbar geometry. Titles, scrolling and silent paints alone do not trigger
+it, so a page can change without updating the bar until the next context change.
+Both modes stop capturing while inactive, locked or display-off.
+
+Existing `dynamic` settings load as continuous; `dynamic_v2` loads as trigger based.
+Saves use `chameleon` and `chameleon_triggered` respectively. Trigger based values
+outside Maximized window use their configured opaque fallback. Copy an existing
+settings.json into the new portable folder to retain configuration.
 
 Sampling uses one physical pixel immediately next to the actual bottom, left or
 right taskbar, with no gap. Exact RGB selection and 240 ms transitions are kept.

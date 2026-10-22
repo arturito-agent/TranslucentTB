@@ -1,7 +1,7 @@
 # Dynamic appearance (experimental)
 
-> Historical experiment report. As of 2026-10-22, periodic Dynamic is named
-> **Chameleon** and event-driven Dynamic v2 is removed. See [current behavior](chameleon.md).
+> Historical experiment report. Current continuous and trigger based Chameleon
+> behavior is documented in [the current contract](chameleon.md).
 
 
 Dynamic is a native appearance option alongside Normal, Opaque, Clear, Blur and

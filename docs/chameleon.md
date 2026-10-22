@@ -1,66 +1,80 @@
-# Chameleon appearance
+# Chameleon appearances
 
-Chameleon is the single adaptive appearance in this fork. It replaces the old
-Dynamic name and retains periodic capture. Dynamic v2's event-only scheduler,
-content hooks and menu option have been removed. This is a product simplification,
-not a new resource benchmark.
+## Selecting a mode
 
-## Behavior
+**Chameleon (continuous)** remains available in every appearance submenu. It
+captures approximately every 500 ms while effective, with a coalesced early read
+on activation/foreground change. It follows stable content changes without
+requiring the application to emit an event.
 
-Choose Chameleon alongside Normal, Opaque, Clear, Blur and Acrylic in any existing
-appearance submenu, including Desktop and Maximized window. The existing state
-and application-rule precedence is unchanged.
+**Chameleon (trigger based)** is available only in Maximized window, including
+its application rules. Existing state/rule precedence applies. The sampler uses
+the highest maximized window in each monitor's z-order as the responsible HWND.
+Changing that HWND, activating the mode, or changing monitor/taskbar geometry
+requests a deferred read. Returning from lock/display-off or rebuilding Explorer
+state invalidates the context and samples again.
 
-While effective, Chameleon captures approximately every 500 ms. A foreground
-change or activation can request a coalesced deferred read; all attempts share a
-200 ms minimum. It therefore observes stable silent page paints without requiring
-an application to emit an accessibility event. Capture resources and timers stop
-when no taskbar needs Chameleon, the display turns off, the session locks or the
-application exits.
+The trigger variant adds no WinEvent subscriptions, content hooks or helper
+process. Existing foreground, window-state and z-order callbacks resolve the
+context. An unchanged HWND and geometry returns without scheduling capture.
+Titles can still affect upstream application rules, but do not themselves request
+samples when the effective context stays unchanged.
 
-Sampling reads a one-physical-pixel line immediately outside the actual bottom,
-left or right taskbar, without a gap. It spans the full monitor edge and selects
-the longest continuous similar-color run. RGB buckets only identify that region;
-the output is the exact middle source pixel, never a channel average. Thin borders
-and shadows directly adjoining the taskbar are intentionally eligible. A candidate
-must repeat after at least 200 ms. Identical targets do not reapply or restart
-animations, except for necessary shell appearance recovery.
+## Bounded work
 
-Transitions retain the tested 240 ms implementation: independent XAML brush
-animation on the modern taskbar and a bounded 33 ms timer on classic/side taskbars.
-No transition frame recaptures the screen. The endpoint is exact and Windows'
-disabled UI animations are respected. See [the implementation report](dynamic-exact-transitions.md).
+Only one shared deferred capture timer can be pending. Context replacements use
+the latest state without extending its deadline; duplicate events cannot add
+reads. The first read runs after about 200 ms. An unchanged RGB stops immediately;
+a new candidate gets at most one confirmation at least 200 ms later. If the two
+samples disagree, the old accepted color remains until another context change.
+Every attempt, including foreground changes, shares the same 200 ms minimum.
+No capture timer remains after the work is consumed. The continuous mode can
+still run its own 500 ms timer on another monitor.
 
-## Existing settings
+This is deliberately narrower than the retired v2 content-event burst scheduler.
+Changing titles, selecting a tab, scrolling, video and silent paints can change
+pixels without changing the context. Trigger based may retain an outdated color
+until the next supported event. Choose continuous when content following matters.
+Fewer captures alone do not establish lower CPU during arbitrary application use.
 
-The canonical JSON value is `"accent": "chameleon"`. Old `dynamic` and `dynamic_v2`
-values deserialize to Chameleon and are saved as `chameleon`. This applies to
-ordinary states, per-window rules and inactive appearances through the shared
-appearance parser. Fallback color and other appearance fields are preserved.
-The legacy v2 name is an input alias only, with no event-driven runtime behind it.
-Its Maximized window enabled flag keeps its existing value.
+## Shared color and animation
 
-Chameleon retains numeric appearance value 5 internally. The read-only diagnostic
-message retains its old name for existing tools; capability bit 3 (v2) is cleared,
-and removed event fields return zero. No permanent diagnostic writer is added.
+Both capture one physical pixel immediately outside the actual bottom, left or
+right taskbar, with zero gap and the full monitor edge length. Four-level RGB
+buckets find the longest continuous similar-color run; its exact midpoint source
+pixel supplies the output, without averaging. Candidates need two observations
+at least 200 ms apart. Identical confirmed targets do not reapply or restart an
+animation, apart from necessary Explorer appearance recovery.
+
+Both retain 240 ms transitions: independent XAML brush animation on modern bars,
+bounded 33 ms animation timer on classic/lateral bars. Animation frames never
+capture the screen, and disabled Windows UI animations are respected. Capture
+resources and timers stop while inactive, locked, display-off or exiting.
+
+## Configuration and diagnostics
+
+The canonical values are `chameleon` (numeric 5) and `chameleon_triggered`
+(numeric 6). Legacy `dynamic` maps to continuous and `dynamic_v2` to trigger based.
+Fallback colors and enable flags survive migration. Trigger based settings in
+other states resolve to the configured opaque fallback, without pixel capture.
+
+The existing read-only `TTB_QueryDynamicStats` message has no disk writer. Field 5
+reports the continuous timer; 27 the deferred timer; 28 remaining trigger reads;
+29 changed active contexts; 33 context checks and 34 unchanged contexts. Context
+checks include ordinary upstream refreshes, not just external WinEvents. Existing
+capture, accepted-color, application and animation counters remain available.
 
 ## Validation and limits
 
-The existing native configuration tests cover canonical and legacy JSON values,
-WinRT conversion and canonical serialization. Portable checks cover adjacent-edge
-geometry, exact color, stability, deduplication and transitions. Obsolete burst
-scheduler checks and the v2-only live helper have been removed. Current Windows
-build provenance is supplied with each release's BUILD.json.
+Portable checks exercise duplicate bursts, one-read equality, bounded confirmation,
+supersession and cancellation alongside shared geometry/color/animation checks.
+Native configuration tests cover both canonical and legacy values and WinRT.
+`Tests/dynamic/events-check.ps1` compares short idle/noisy-event observations,
+checks silent-paint differences, real maximized HWND switches, same-RGB dedup,
+physical transition colors, deactivation and bottom/left/right positions.
 
-Earlier CPU/RAM figures and interactive VM observations remain historical and
-versioned in the comparison reports. No new CPU/RAM campaign is required for this
-rename/removal. Classic glyph contrast on some dark colors remains unresolved;
-multiple monitors, HDR and all scaling combinations are not established.
-
-Native source `aeed2fd730b31a680a4d81858dce0a2834516563` passed **84 native tests**
-and **2,034 portable checks** in [Windows CI](https://github.com/arturito-agent/TranslucentTB/actions/runs/39794919939).
-The native migration test covers `chameleon`, `dynamic` and `dynamic_v2`, WinRT
-conversion, canonical `chameleon` serialization and retained fallback colors.
-Static menu verification found exactly seven Chameleon entries and no v2 entry.
-The retired burst scheduler's nine checks are no longer part of the portable
-suite. No resource measurements or interactive VM session were repeated.
+The new Windows VM run and build results will be recorded after validation.
+Historical resource figures remain versioned in the earlier reports. Classic
+glyph contrast on dark backgrounds is unresolved; HDR, multiple monitors and all
+DPI combinations are not established. No security setting or extra privilege is
+required, and captured pixels are not sent to disk or a network by this feature.

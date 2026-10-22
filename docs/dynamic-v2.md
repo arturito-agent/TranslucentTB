@@ -1,7 +1,7 @@
 # Dynamic v2: event-driven maximized appearance
 
-> Historical experiment report. As of 2026-10-22, periodic Dynamic is named
-> **Chameleon** and event-driven Dynamic v2 is removed. See [current behavior](chameleon.md).
+> Historical experiment report. Current continuous and trigger based Chameleon
+> behavior is documented in [the current contract](chameleon.md).
 
 
 Dynamic v2 is available only under **Maximized window → Enabled → Dynamic v2**.
