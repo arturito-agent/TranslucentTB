@@ -12,11 +12,12 @@
             "blur",
             "acrylic",
             "chameleon",
+            "chameleon_triggered",
             "dynamic",
             "dynamic_v2"
           ],
           "type": "string",
-          "description": "Chameleon uses periodic color capture. Legacy dynamic and dynamic_v2 names migrate to chameleon when saved."
+          "description": "chameleon captures periodically; chameleon_triggered uses bounded context events in Maximized window only. Legacy dynamic and dynamic_v2 migrate to their corresponding canonical names."
         },
         "color": {
           "pattern": "^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",

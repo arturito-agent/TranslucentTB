@@ -56,6 +56,11 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Chameleon (continuous)" GroupName="DesktopCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Chameleon</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_VisibleWindow" Style="{StaticResource MergeIconsMenuFlyoutSubItem}">
                 <MenuFlyoutSubItem.Tag>
@@ -96,6 +101,11 @@
                 <muxc:RadioMenuFlyoutItem x:Uid="TrayFlyoutPage_Acrylic" GroupName="VisibleCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
                     <muxc:RadioMenuFlyoutItem.Tag>
                         <primitives:AccentState>Acrylic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Chameleon (continuous)" GroupName="VisibleCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Chameleon</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
@@ -140,9 +150,14 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
-<muxc:RadioMenuFlyoutItem Text="Chameleon" GroupName="MaximizedCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+<muxc:RadioMenuFlyoutItem Text="Chameleon (continuous)" GroupName="MaximizedCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
                     <muxc:RadioMenuFlyoutItem.Tag>
                         <primitives:AccentState>Chameleon</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Chameleon (trigger based)" GroupName="MaximizedCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>ChameleonTriggered</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
@@ -190,6 +205,11 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Chameleon (continuous)" GroupName="StartCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Chameleon</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_SearchOpened" Style="{StaticResource MergeIconsMenuFlyoutSubItem}">
                 <MenuFlyoutSubItem.Tag>
@@ -230,6 +250,11 @@
                 <muxc:RadioMenuFlyoutItem x:Uid="TrayFlyoutPage_Acrylic" GroupName="SearchCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
                     <muxc:RadioMenuFlyoutItem.Tag>
                         <primitives:AccentState>Acrylic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Chameleon (continuous)" GroupName="SearchCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Chameleon</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
@@ -274,6 +299,11 @@
                         <primitives:AccentState>Acrylic</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Chameleon (continuous)" GroupName="TaskViewCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Chameleon</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>
             <MenuFlyoutSubItem x:Uid="TrayFlyoutPage_BatterySaver" Style="{StaticResource MergeIconsMenuFlyoutSubItem}" Visibility="{x:Bind SystemHasBattery}">
                 <MenuFlyoutSubItem.Tag>
@@ -314,6 +344,11 @@
                 <muxc:RadioMenuFlyoutItem x:Uid="TrayFlyoutPage_Acrylic" GroupName="BatterySaverCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
                     <muxc:RadioMenuFlyoutItem.Tag>
                         <primitives:AccentState>Acrylic</primitives:AccentState>
+                    </muxc:RadioMenuFlyoutItem.Tag>
+                </muxc:RadioMenuFlyoutItem>
+<muxc:RadioMenuFlyoutItem Text="Chameleon (continuous)" GroupName="BatterySaverCompositionAttribute" Style="{StaticResource MergeIconsRadioMenuFlyoutItem}" Click="AppearanceClicked">
+                    <muxc:RadioMenuFlyoutItem.Tag>
+                        <primitives:AccentState>Chameleon</primitives:AccentState>
                     </muxc:RadioMenuFlyoutItem.Tag>
                 </muxc:RadioMenuFlyoutItem>
             </MenuFlyoutSubItem>

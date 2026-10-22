@@ -162,7 +162,8 @@ int main()
 		Check(fade.Step(1360) == green && !fade.active, "fade ends at exact target and becomes idle");
 		fade.Start(green,1500);
 		Check(!fade.active, "identical target creates no animation");
-		Check(IsChameleonAccent(AppearanceAccent::Chameleon), "Chameleon is the only sampled appearance");
+		Check(IsChameleonAccent(AppearanceAccent::Chameleon), "continuous Chameleon captures");
+		Check(IsChameleonAccent(AppearanceAccent::ChameleonTriggered), "triggered Chameleon captures");
 		Check(!IsChameleonAccent(AppearanceAccent::Opaque), "Opaque does not capture");
 		Dynamic::EventSample<int> events;
 		Check(events.Request(1) && events.remaining == 2, "new context schedules a read and optional confirmation");

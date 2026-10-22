@@ -7,10 +7,11 @@ enum class AppearanceAccent {
 	Clear = 2,
 	Blur = 3,
 	Acrylic = 4,
-	Chameleon = 5
+	Chameleon = 5,
+	ChameleonTriggered = 6
 };
 
 constexpr bool IsChameleonAccent(AppearanceAccent accent) noexcept
 {
-	return accent == AppearanceAccent::Chameleon;
+	return accent == AppearanceAccent::Chameleon || accent == AppearanceAccent::ChameleonTriggered;
 }

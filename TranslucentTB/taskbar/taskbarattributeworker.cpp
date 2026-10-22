@@ -155,6 +155,13 @@ void TaskbarAttributeWorker::OnForegroundWindowChange(DWORD, HWND hwnd, LONG idO
 			MessagePrint(spdlog::level::debug, std::format(L"Changed foreground window to {}", DumpWindow(m_ForegroundWindow)));
 		}
 
+		auto focusSample = wil::scope_exit([this, oldForegroundWindow] {
+			if (m_DynamicContinuousTimer && oldForegroundWindow != m_ForegroundWindow)
+			{
+				m_DynamicFocusPending = true;
+				ScheduleDynamicSample();
+			}
+		});
 		AttributeRefresher refresher(*this);
 		HMONITOR oldMonitor = nullptr;
 		if (oldForegroundWindow)
@@ -353,7 +360,7 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 		case 2: return static_cast<LRESULT>(m_DynamicApplications);
 		case 3: return static_cast<LRESULT>(m_DynamicLastRgb);
 		case 4: return static_cast<LRESULT>(m_DynamicLastLength);
-		case 5: return 0; // No periodic capture timer.
+		case 5: return m_DynamicContinuousTimer;
 		case 6: return m_DynamicLocked || m_DynamicDisplayOff;
 		case 7: return static_cast<LRESULT>(m_DynamicLastSample);
 		case 8: return static_cast<LRESULT>(m_DynamicFrames);
@@ -407,6 +414,11 @@ LRESULT TaskbarAttributeWorker::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM 
 	if (uMsg == WM_TIMER && wParam == DYNAMIC_ANIMATION_TIMER)
 	{
 		if (m_DynamicAnimationTimer) StepDynamicAnimations();
+		return 0;
+	}
+	if (uMsg == WM_TIMER && wParam == DYNAMIC_CONTINUOUS_TIMER)
+	{
+		if (m_DynamicContinuousTimer) SampleDynamic(true);
 		return 0;
 	}
 	if (uMsg == WM_TIMER && wParam == DYNAMIC_TIMER)
@@ -525,7 +537,7 @@ TaskbarAppearance TaskbarAttributeWorker::GetConfig(taskbar_iterator taskbar) co
 {
 	const auto& config = m_ConfigManager.GetConfig();
 	const auto fallback = [](TaskbarAppearance appearance) {
-		if (IsChameleonAccent(appearance.Accent)) appearance.Accent = AppearanceAccent::Opaque;
+		if (appearance.Accent == AppearanceAccent::ChameleonTriggered) appearance.Accent = AppearanceAccent::Opaque;
 		return appearance;
 	};
 
@@ -863,15 +875,17 @@ std::uint32_t TaskbarAttributeWorker::DynamicSchedulerFlags() const noexcept
 void TaskbarAttributeWorker::UpdateDynamicTimer()
 {
 	const auto flagsAtEntry = DynamicSchedulerFlags();
-	bool needed = false;
+	bool needed = false, continuousNeeded = false;
 	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
 		// Suppressing replies during a composition refresh is transient. Keep the
 		// timer and capture resources; SampleDynamic skips that critical section.
+		const auto accent = GetConfig(it).Accent;
 		const bool active = !m_DynamicLocked && !m_DynamicDisplayOff && !m_DynamicStopping &&
-			IsChameleonAccent(GetConfig(it).Accent);
+			IsChameleonAccent(accent);
+		continuousNeeded |= active && accent == AppearanceAccent::Chameleon;
 		std::optional<SampleContext> context;
-		if (active)
+		if (active && accent == AppearanceAccent::ChameleonTriggered)
 		{
 			// Existing shell callbacks already maintain this set and z-order.
 			// No content hooks, title reads or accessibility subscriptions are added.
@@ -906,6 +920,19 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 			it->second.DynamicState.pending.reset();
 		}
 	}
+	if (continuousNeeded && !m_DynamicContinuousTimer)
+	{
+		m_DynamicContinuousTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_CONTINUOUS_TIMER, 500, nullptr, 50) != 0;
+		if (!m_DynamicContinuousTimer) ++m_DynamicTimerFailures;
+		m_DynamicFocusPending = m_DynamicContinuousTimer;
+	}
+	else if (!continuousNeeded && m_DynamicContinuousTimer)
+	{
+		KillTimer(m_WindowHandle, DYNAMIC_CONTINUOUS_TIMER);
+		m_DynamicContinuousTimer = false;
+		m_DynamicFocusPending = false;
+	}
+	needed |= m_DynamicFocusPending;
 	if (needed) ScheduleDynamicSample();
 	else if (!needed && m_DynamicTimer)
 	{
@@ -925,16 +952,27 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 bool TaskbarAttributeWorker::HasConfiguredDynamic() const
 {
 	const auto &config = m_ConfigManager.GetConfig();
-	const auto &appearance = config.MaximisedWindowAppearance;
-	if (!appearance.Enabled) return false;
-	if (IsChameleonAccent(appearance.Accent)) return true;
-	const auto chameleonRule = [](const auto &item) {
-		const auto &rule = item.second;
-		return IsChameleonAccent(rule.Accent) || (rule.Inactive && IsChameleonAccent(rule.Inactive->Accent));
-	};
-	return std::any_of(appearance.ClassRules.begin(), appearance.ClassRules.end(), chameleonRule) ||
-		std::any_of(appearance.TitleRules.begin(), appearance.TitleRules.end(), chameleonRule) ||
-		std::any_of(appearance.FileRules.begin(), appearance.FileRules.end(), chameleonRule);
+	if (IsChameleonAccent(config.DesktopAppearance.Accent)) return true;
+	for (const auto *appearance : { &config.StartOpenedAppearance, &config.SearchOpenedAppearance,
+		&config.TaskViewOpenedAppearance, &config.BatterySaverAppearance })
+	{
+		if (appearance->Enabled && IsChameleonAccent(appearance->Accent)) return true;
+	}
+	for (const auto *appearance : { &config.VisibleWindowAppearance, &config.MaximisedWindowAppearance })
+	{
+		if (!appearance->Enabled) continue;
+		if (IsChameleonAccent(appearance->Accent)) return true;
+		const auto dynamicRule = [](const auto &item)
+		{
+			const auto &rule = item.second;
+			return IsChameleonAccent(rule.Accent) ||
+				(rule.Inactive && IsChameleonAccent(rule.Inactive->Accent));
+		};
+		if (std::any_of(appearance->ClassRules.begin(), appearance->ClassRules.end(), dynamicRule) ||
+			std::any_of(appearance->TitleRules.begin(), appearance->TitleRules.end(), dynamicRule) ||
+			std::any_of(appearance->FileRules.begin(), appearance->FileRules.end(), dynamicRule)) return true;
+	}
+	return false;
 }
 
 void TaskbarAttributeWorker::UpdateDynamicRecoveryTimer()
@@ -1024,7 +1062,7 @@ void TaskbarAttributeWorker::StepDynamicAnimations()
 	UpdateDynamicAnimationTimer();
 }
 
-void TaskbarAttributeWorker::SampleDynamic()
+void TaskbarAttributeWorker::SampleDynamic(bool continuous)
 {
 	if (m_DynamicLocked || m_DynamicDisplayOff || m_DynamicSampling || m_DynamicStopping) return;
 	if (m_disableAttributeRefreshReply) { ScheduleDynamicSample(); return; }
@@ -1033,11 +1071,14 @@ void TaskbarAttributeWorker::SampleDynamic()
 	m_DynamicLastSample = now;
 	m_DynamicSampling = true;
 	auto guard = wil::scope_exit([this] { m_DynamicSampling = false; });
+	const bool focusPending = std::exchange(m_DynamicFocusPending, false);
 	// Apply after capture; composition calls can enter nested message loops.
 	std::vector<std::pair<HMONITOR, HWND>> changed;
 	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
-		if (!it->second.DynamicEvent.remaining || GetConfig(it).Accent != AppearanceAccent::Chameleon) continue;
+		const auto accent = GetConfig(it).Accent;
+		if (!(accent == AppearanceAccent::Chameleon ? (continuous || focusPending) :
+			accent == AppearanceAccent::ChameleonTriggered && !continuous && it->second.DynamicEvent.remaining)) continue;
 		MONITORINFO monitor{ sizeof(MONITORINFO) };
 		RECT bar{};
 		const auto hwnd = it->second.Taskbar.TaskbarWindow.handle();
@@ -1075,7 +1116,8 @@ void TaskbarAttributeWorker::SampleDynamic()
 				(static_cast<std::uint32_t>(color.g) << 8) | color.b;
 			changed.emplace_back(it->first, hwnd);
 		}
-		it->second.DynamicEvent.Consumed(it->second.DynamicState.pending.has_value());
+		if (accent == AppearanceAccent::ChameleonTriggered)
+			it->second.DynamicEvent.Consumed(it->second.DynamicState.pending.has_value());
 	}
 	for (const auto &[monitor, hwnd] : changed)
 	{

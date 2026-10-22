@@ -74,7 +74,7 @@ namespace winrt::TranslucentTB::Xaml::Pages::implementation
 					{
 						auto &originalLabel = m_AccentColorLabels.at(static_cast<std::size_t>(state));
 						if (originalLabel.empty()) originalLabel = colorItem.Text();
-						colorItem.Text((appearance.Accent() == txmp::AccentState::Chameleon)
+						colorItem.Text((appearance.Accent() == txmp::AccentState::Chameleon || appearance.Accent() == txmp::AccentState::ChameleonTriggered)
 							? hstring(L"Fallback color") : originalLabel);
 					}
 				}
