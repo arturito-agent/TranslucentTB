@@ -56,3 +56,11 @@ Earlier CPU/RAM figures and interactive VM observations remain historical and
 versioned in the comparison reports. No new CPU/RAM campaign is required for this
 rename/removal. Classic glyph contrast on some dark colors remains unresolved;
 multiple monitors, HDR and all scaling combinations are not established.
+
+Native source `aeed2fd730b31a680a4d81858dce0a2834516563` passed **84 native tests**
+and **2,034 portable checks** in [Windows CI](https://github.com/arturito-agent/TranslucentTB/actions/runs/39794919939).
+The native migration test covers `chameleon`, `dynamic` and `dynamic_v2`, WinRT
+conversion, canonical `chameleon` serialization and retained fallback colors.
+Static menu verification found exactly seven Chameleon entries and no v2 entry.
+The retired burst scheduler's nine checks are no longer part of the portable
+suite. No resource measurements or interactive VM session were repeated.
