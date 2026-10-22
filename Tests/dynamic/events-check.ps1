@@ -1,7 +1,8 @@
 param(
  [Parameter(Mandatory=$true)][string]$ExecutablePath,
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
- [switch]$SidesOnly
+ [switch]$SidesOnly,
+ [ValidateSet("chameleon","chameleon_triggered")][string]$OnlyMode
 )
 $ErrorActionPreference='Stop'
 if((Test-Path $OutputDirectory) -or (Get-Process TranslucentTB -ErrorAction SilentlyContinue)){throw 'Fresh output and no existing target required'}
@@ -55,7 +56,7 @@ function Assert-Settled($Before,$After,[int]$MaximumReads) {
  }
 }
 try {
- foreach($version in @('chameleon','chameleon_triggered')) {
+ foreach($version in $(if($OnlyMode){@($OnlyMode)}else{@('chameleon','chameleon_triggered')})) {
   @{desktop_appearance=@{accent='clear';color='#00000000'};visible_window_appearance=@{enabled=$false};maximized_window_appearance=@{enabled=$true;accent=$version;color='#203040FF'};start_opened_appearance=@{enabled=$false};search_opened_appearance=@{enabled=$false};task_view_opened_appearance=@{enabled=$false};battery_saver_appearance=@{enabled=$false}}|ConvertTo-Json -Depth 8|Set-Content -Encoding UTF8 $settings
   $target=Start-Process $ExecutablePath -WorkingDirectory (Split-Path $ExecutablePath) -PassThru
   $watch=[Diagnostics.Stopwatch]::StartNew();$ready=$false
@@ -72,7 +73,7 @@ try {
    if(-not [ExactProbe]::GetWindowRect([ExactProbe]::FindWindow('Shell_TrayWnd',$null),[ref]$bar)){throw 'No taskbar'}
    $script:pixelX=if($position -eq 'Bottom'){[int]($bar.Left+3*($bar.Right-$bar.Left)/4)}else{[int](($bar.Left+$bar.Right)/2)}
    $script:pixelY=[int](($bar.Top+$bar.Bottom)/2)
-   Assert-Color 0xF9F6F3;$null=Snapshot 'initial-color'
+   $null=Snapshot 'initial-color';Assert-Color 0xF9F6F3
    $first=Snapshot 'idle-start';Pump 5;$last=Snapshot 'idle-end'
    Assert-Settled $first $last 0
    if($first.applications -ne $last.applications -or $first.classic_writes -ne $last.classic_writes){throw 'Idle target reapplied'}

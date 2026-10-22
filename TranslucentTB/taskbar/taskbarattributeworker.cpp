@@ -875,7 +875,7 @@ std::uint32_t TaskbarAttributeWorker::DynamicSchedulerFlags() const noexcept
 void TaskbarAttributeWorker::UpdateDynamicTimer()
 {
 	const auto flagsAtEntry = DynamicSchedulerFlags();
-	bool needed = false, continuousNeeded = false;
+	bool needed = false, continuousNeeded = false, newContext = false;
 	for (auto it = m_Taskbars.begin(); it != m_Taskbars.end(); ++it)
 	{
 		// Suppressing replies during a composition refresh is transient. Keep the
@@ -904,7 +904,7 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 		if (it->second.DynamicEvent.Request(context))
 		{
 			it->second.DynamicState.pending.reset();
-			if (context) ++m_DynamicContexts;
+			if (context) { ++m_DynamicContexts; newContext = true; }
 		}
 		else ++m_DynamicFiltered;
 		needed |= it->second.DynamicEvent.remaining != 0;
@@ -933,7 +933,9 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 		m_DynamicFocusPending = false;
 	}
 	needed |= m_DynamicFocusPending;
-	if (needed) ScheduleDynamicSample();
+	// Let the maximize/restore animation settle before the initial edge read.
+	// Confirmations remain 200 ms apart; pending deadlines are never extended.
+	if (needed) ScheduleDynamicSample(newContext && !m_DynamicFocusPending ? 400u : 200u);
 	else if (!needed && m_DynamicTimer)
 	{
 		m_DynamicLastStopEntryFlags = flagsAtEntry;
@@ -1011,14 +1013,14 @@ void TaskbarAttributeWorker::ResetDynamicCaptures()
 	}
 }
 
-void TaskbarAttributeWorker::ScheduleDynamicSample()
+void TaskbarAttributeWorker::ScheduleDynamicSample(UINT delay)
 {
 	if (m_DynamicTimer || m_DynamicLocked || m_DynamicDisplayOff || m_DynamicStopping) return;
 	// Duplicates and replacement contexts never postpone an existing deadline.
 	// The same minimum applies to every event, including foreground changes.
-	m_DynamicDue = GetTickCount64() + 200;
+	m_DynamicDue = GetTickCount64() + delay;
 	SetLastError(ERROR_SUCCESS);
-	m_DynamicTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_TIMER, 200, nullptr, 50) != 0;
+	m_DynamicTimer = SetCoalescableTimer(m_WindowHandle, DYNAMIC_TIMER, delay, nullptr, 50) != 0;
 	m_DynamicTimerError = m_DynamicTimer ? ERROR_SUCCESS : GetLastError();
 	if (!m_DynamicTimer) ++m_DynamicTimerFailures;
 }

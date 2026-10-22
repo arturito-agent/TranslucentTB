@@ -153,7 +153,7 @@ private:
 	void UpdateDynamicTimer();
 	std::uint32_t DynamicSchedulerFlags() const noexcept;
 	void ResetDynamicCaptures();
-	void ScheduleDynamicSample();
+	void ScheduleDynamicSample(UINT delay = 200);
 	void SampleDynamic(bool continuous = false);
 	void UpdateDynamicAnimationTimer();
 	void StepDynamicAnimations();
