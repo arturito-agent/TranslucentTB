@@ -24,7 +24,7 @@ samples when the effective context stays unchanged.
 
 Only one shared deferred capture timer can be pending. Context replacements use
 the latest state without extending its deadline; duplicate events cannot add
-reads. The first read runs after about 400 ms, allowing the maximize animation to settle. An unchanged RGB stops immediately;
+reads. The first read runs after about 500 ms, allowing the maximize animation to settle. An unchanged RGB stops immediately;
 a new candidate gets at most one confirmation at least 200 ms later. If the two
 samples disagree, the old accepted color remains until another context change.
 Every attempt, including foreground changes, shares the same 200 ms minimum.

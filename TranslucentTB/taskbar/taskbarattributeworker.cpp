@@ -935,7 +935,7 @@ void TaskbarAttributeWorker::UpdateDynamicTimer()
 	needed |= m_DynamicFocusPending;
 	// Let the maximize/restore animation settle before the initial edge read.
 	// Confirmations remain 200 ms apart; pending deadlines are never extended.
-	if (needed) ScheduleDynamicSample(newContext && !m_DynamicFocusPending ? 400u : 200u);
+	if (needed) ScheduleDynamicSample(newContext && !m_DynamicFocusPending ? 500u : 200u);
 	else if (!needed && m_DynamicTimer)
 	{
 		m_DynamicLastStopEntryFlags = flagsAtEntry;
