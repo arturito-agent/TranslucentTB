@@ -30,6 +30,7 @@ public static class ExactProbe {
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr w,System.Text.StringBuilder s,int n);
  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr w,uint m,IntPtr p,IntPtr l);
  public static IntPtr Browser(){IntPtr found=IntPtr.Zero;EnumWindows((w,l)=>{var t=new System.Text.StringBuilder(256);GetWindowText(w,t,256);if(t.ToString().StartsWith("Dynamic browser ")){found=w;return false;}return true;},IntPtr.Zero);return found;}
+ public static void WakeTaskbar(){UIntPtr r;var w=FindWindow("Shell_TrayWnd",null);if(w!=IntPtr.Zero)SendMessageTimeout(w,0,UIntPtr.Zero,IntPtr.Zero,2,500,out r);}
  public static ulong Read(uint field) {UIntPtr r;var w=FindWindow("TTB_WorkerWindow","TTB_WorkerWindow");if(w==IntPtr.Zero||SendMessageTimeout(w,RegisterWindowMessage("TTB_QueryDynamicStats"),(UIntPtr)field,IntPtr.Zero,2,1000,out r)==IntPtr.Zero)throw new Exception("Worker unavailable");return r.ToUInt64();}
  public static uint Pixel(int x,int y){var dc=GetDC(IntPtr.Zero);try{uint c=GetPixel(dc,x,y);if(c==0xffffffff)throw new Exception("Pixel unavailable");return ((c&255)<<16)|(c&0xff00)|((c>>16)&255);}finally{ReleaseDC(IntPtr.Zero,dc);}}
 }
@@ -45,7 +46,7 @@ function Pump([double]$Seconds){$w=[Diagnostics.Stopwatch]::StartNew();while($w.
 function Save-Rows {$rows|ConvertTo-Json -Depth 6|Set-Content -Encoding UTF8 (Join-Path $OutputDirectory 'observations.json')}
 function Snapshot([string]$Stage){
  $target.Refresh()
- $r=[pscustomobject]@{mode=$version;position=$position;stage=$Stage;frames=[ExactProbe]::Read(8);samples=[ExactProbe]::Read(0);changes=[ExactProbe]::Read(1);applications=[ExactProbe]::Read(2);rgb=[ExactProbe]::Read(3);periodic=[ExactProbe]::Read(5);burst=[ExactProbe]::Read(27);remaining=[ExactProbe]::Read(28);paused=[ExactProbe]::Read(6);flags=[ExactProbe]::Read(11);last_sample=[ExactProbe]::Read(7);run_length=[ExactProbe]::Read(4);failures=[ExactProbe]::Read(10);triggers=[ExactProbe]::Read(29);duplicate_colors=[ExactProbe]::Read(30);classic_writes=[ExactProbe]::Read(31);animation_timer=[ExactProbe]::Read(32);context_checks=[ExactProbe]::Read(33);filtered=[ExactProbe]::Read(34);qpc=[Diagnostics.Stopwatch]::GetTimestamp();frequency=[Diagnostics.Stopwatch]::Frequency;cpu_seconds=$target.TotalProcessorTime.TotalSeconds;explorer_cpu_seconds=(Get-Process explorer|Measure-Object -Property CPU -Sum).Sum;private_bytes=$target.PrivateMemorySize64;working_set_bytes=$target.WorkingSet64;handles=$target.HandleCount}
+ $r=[pscustomobject]@{mode=$version;position=$position;stage=$Stage;frames=[ExactProbe]::Read(8);samples=[ExactProbe]::Read(0);changes=[ExactProbe]::Read(1);applications=[ExactProbe]::Read(2);rgb=[ExactProbe]::Read(3);periodic=[ExactProbe]::Read(5);burst=[ExactProbe]::Read(27);remaining=[ExactProbe]::Read(28);paused=[ExactProbe]::Read(6);flags=[ExactProbe]::Read(11);last_sample=[ExactProbe]::Read(7);run_length=[ExactProbe]::Read(4);failures=[ExactProbe]::Read(10);triggers=[ExactProbe]::Read(29);duplicate_colors=[ExactProbe]::Read(30);classic_writes=[ExactProbe]::Read(31);animation_timer=[ExactProbe]::Read(32);taskbars=[ExactProbe]::Read(12);recovery_timer=[ExactProbe]::Read(23);recovery_attempts=[ExactProbe]::Read(24);context_checks=[ExactProbe]::Read(33);filtered=[ExactProbe]::Read(34);qpc=[Diagnostics.Stopwatch]::GetTimestamp();frequency=[Diagnostics.Stopwatch]::Frequency;cpu_seconds=$target.TotalProcessorTime.TotalSeconds;explorer_cpu_seconds=(Get-Process explorer|Measure-Object -Property CPU -Sum).Sum;private_bytes=$target.PrivateMemorySize64;working_set_bytes=$target.WorkingSet64;handles=$target.HandleCount}
  $rows.Add($r);Save-Rows;return $r
 }
 function Color([uint32]$Rgb){return [Drawing.Color]::FromArgb([int](($Rgb -shr 16)-band 255),[int](($Rgb -shr 8)-band 255),[int]($Rgb-band 255))}
@@ -62,8 +63,8 @@ try {
   $watch=[Diagnostics.Stopwatch]::StartNew();$ready=$false
   do {
    $target.Refresh();if($target.HasExited){throw 'Target exited during initialization'}
-   try {$owner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId([ExactProbe]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow'),[ref]$owner);$ready=$owner -eq $target.Id -and ([ExactProbe]::Read(254)-band 8)-ne 0} catch {$ready=$false}
-   if(-not $ready){Pump 0.2};if($watch.Elapsed.TotalSeconds -gt 30){throw 'Owned worker did not become ready'}
+   try {$owner=[uint32]0;[void][ExactProbe]::GetWindowThreadProcessId([ExactProbe]::FindWindow('TTB_WorkerWindow','TTB_WorkerWindow'),[ref]$owner);$ready=$owner -eq $target.Id -and ([ExactProbe]::Read(254)-band 8)-ne 0 -and [ExactProbe]::Read(12) -gt 0 -and ([ExactProbe]::Read(11)-band 8)-eq 0} catch {$ready=$false}
+   if(-not $ready){[ExactProbe]::WakeTaskbar();Pump 0.2};if($watch.Elapsed.TotalSeconds -gt 30){throw 'Owned worker did not become ready'}
   } while(-not $ready)
   foreach($position in $(if($SidesOnly){@('Bottom','Left','Right')}else{@('Bottom')})) {
    if($SidesOnly){Set-ExperimentTaskbarPosition $position}

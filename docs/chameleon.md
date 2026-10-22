@@ -73,7 +73,39 @@ Native configuration tests cover both canonical and legacy values and WinRT.
 checks silent-paint differences, real maximized HWND switches, same-RGB dedup,
 physical transition colors, deactivation and bottom/left/right positions.
 
-The new Windows VM run and build results will be recorded after validation.
+Native `ed7ad98` passed 84 native tests and 2,042 portable checks in
+[Windows CI](https://github.com/arturito-agent/TranslucentTB/actions/runs/39811657138).
+The actual VM run passed both modes on classic Bottom/Left/Right, active moves
+Bottom → Left → Right → Bottom, and the trigger variant on the modern taskbar.
+Exact physical colors, one-level RGB changes, intermediate animation colors,
+silent-paint differences, noisy-event filtering and inactive capture suspension
+passed. Modern continuous behavior also passed on `b1cc217`, whose continuous
+implementation is unchanged by the later trigger-delay fix.
+
+Across each five-second classic idle interval, continuous captured 10 frames;
+trigger based captured zero. Across three approximately 3.5-second noisy-event
+intervals, trigger based filtered all 840 unchanged context checks and captured
+zero frames; continuous captured 21. New-RGB HWND switches took two trigger reads.
+Same-RGB switches on Bottom/Right took one read and no application; the Left
+case retained its context and required none. Active taskbar moves updated the
+color with the same responsible window. The modern trigger run likewise had
+zero idle/noisy captures and no timers left running after work.
+
+Both used approximately 9.3–9.5 MiB private commit and 52–55 MiB working set.
+Application idle CPU was about 0–0.3% of one logical core; noisy-event intervals
+were about 0.4–1.3% in both modes. Five-second boundaries and process CPU timer
+resolution make these rough figures. They do not demonstrate a consistent CPU
+advantage for the trigger variant. The demonstrated benefit is fewer captures;
+continuous remains preferable for following silent content changes.
+
+[Sanitized observations and summaries](dynamic-results/chameleon-events-ed7ad98.json)
+pin the actual executable and helper hashes. The helper waits for a discovered
+bar and sends a benign WM_NULL to let Explorer's injection hook initialize before
+timed phases. Early startup attempts that timed out in XAML Diagnostics or began
+before discovery were excluded; they are not successful recovery evidence.
+The 200 ms initial trigger read also missed an unfinished maximize frame in the
+first build; the tested final version defers that read to 500 ms, then confirms
+at least 200 ms later. No periodic timer was added to work around those failures.
 Historical resource figures remain versioned in the earlier reports. Classic
 glyph contrast on dark backgrounds is unresolved; HDR, multiple monitors and all
 DPI combinations are not established. No security setting or extra privilege is
