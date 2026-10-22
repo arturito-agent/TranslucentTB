@@ -11,9 +11,12 @@
             "clear",
             "blur",
             "acrylic",
-            "dynamic"
+            "chameleon",
+            "dynamic",
+            "dynamic_v2"
           ],
-          "type": "string"
+          "type": "string",
+          "description": "Chameleon uses periodic color capture. Legacy dynamic and dynamic_v2 names migrate to chameleon when saved."
         },
         "color": {
           "pattern": "^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$",

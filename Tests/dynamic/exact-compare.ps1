@@ -3,8 +3,7 @@ param(
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
  [switch]$SidesOnly,
  [switch]$WithBrowser,
- [switch]$BrowserOnly,
- [ValidateSet('All','dynamic','dynamic_v2')][string]$OnlyMode='All'
+ [switch]$BrowserOnly
 )
 $ErrorActionPreference='Stop'
 if((Test-Path $OutputDirectory) -or (Get-Process TranslucentTB -ErrorAction SilentlyContinue)){throw 'Fresh output and no existing target required'}
@@ -53,7 +52,7 @@ function Snapshot([string]$Stage){
 function Color([uint32]$Rgb){return [Drawing.Color]::FromArgb([int](($Rgb -shr 16)-band 255),[int](($Rgb -shr 8)-band 255),[int]($Rgb-band 255))}
 function Assert-Color([uint32]$Rgb){if([ExactProbe]::Read(3) -ne $Rgb -or [ExactProbe]::Pixel($script:pixelX,$script:pixelY) -ne $Rgb){throw ('Exact RGB mismatch: expected {0:X6}, state {1:X6}, physical {2:X6}' -f $Rgb,[ExactProbe]::Read(3),[ExactProbe]::Pixel($script:pixelX,$script:pixelY))}}
 try {
- $modes=if($SidesOnly){@('dynamic_v2')}elseif($OnlyMode -ne 'All'){@($OnlyMode)}else{@('dynamic','dynamic_v2')}
+ $modes=@('chameleon')
  $positions=if($SidesOnly){@('Bottom','Left','Right')}else{@('Bottom')}
  foreach($version in $modes){
   @{desktop_appearance=@{accent='clear';color='#00000000'};visible_window_appearance=@{enabled=$false};maximized_window_appearance=@{enabled=$true;accent=$version;color='#203040FF'};start_opened_appearance=@{enabled=$false};search_opened_appearance=@{enabled=$false};task_view_opened_appearance=@{enabled=$false};battery_saver_appearance=@{enabled=$false}}|ConvertTo-Json -Depth 8|Set-Content -Encoding UTF8 $settings
@@ -81,13 +80,11 @@ try {
    $null=Snapshot 'initial-color'
    Assert-Color 0xF9F6F3
    $first=Snapshot 'idle-start';Pump $(if($SidesOnly){3}else{15});$last=Snapshot 'idle-end'
-   if($version -eq 'dynamic_v2' -and ($first.frames -ne $last.frames -or $last.burst -or $last.animation_timer)){throw 'Unexpected idle capture/animation'}
    if($first.applications -ne $last.applications -or $first.classic_writes -ne $last.classic_writes){throw 'Identical idle RGB reapplied'}
    if(-not $SidesOnly){
     $first=Snapshot 'duplicate-events-start';$w=[Diagnostics.Stopwatch]::StartNew()
     while($w.Elapsed.TotalSeconds -lt 10){[ExactProbe]::NotifyWinEvent(0x800c,$form.Handle,0,0);[ExactProbe]::NotifyWinEvent(0x800b,$form.Handle,0,0);Pump 0.05}
     $last=Snapshot 'duplicate-events-end'
-    if($version -eq 'dynamic_v2' -and $first.frames -ne $last.frames){throw 'Duplicate title/geometry events caused capture'}
     if($first.applications -ne $last.applications -or $first.classic_writes -ne $last.classic_writes){throw 'Identical noisy RGB reapplied'}
    }
    # Exercise a one-level change inside the same four-level bucket.
@@ -106,7 +103,7 @@ try {
     if($first.applications -ne $last.applications){throw 'Changing titles reapplied identical RGB'}
     # A paint with no corresponding subscribed WinEvent demonstrates coverage limits.
     $first=Snapshot 'silent-paint-start';$form.BackColor=Color 0xE8DDD1;$form.Refresh();Pump 3;$last=Snapshot 'silent-paint-end'
-    if($version -eq 'dynamic'){Assert-Color 0xE8DDD1}
+    if($version -eq 'chameleon'){Assert-Color 0xE8DDD1}
     # The next supported event must eventually converge even during cooldown.
     $form.Text='Dynamic final content event';Pump 3;Assert-Color 0xE8DDD1;$null=Snapshot 'final-event'
    }
@@ -131,10 +128,10 @@ try {
    if(-not $commandLine.Contains($profile)){throw 'Refusing an unrelated browser window'}
    $browserWindow=$browserCandidate
    [void][ExactProbe]::ShowWindow($browserWindow,3);[void][ExactProbe]::SetForegroundWindow($browserWindow)
-   Pump 5;$null=Snapshot 'browser-idle';if($version -eq 'dynamic'){Assert-Color 0xF9F6F3}
+   Pump 5;$null=Snapshot 'browser-idle';if($version -eq 'chameleon'){Assert-Color 0xF9F6F3}
    Pump 7;$null=Snapshot 'browser-title-event';Assert-Color 0x436E99
    Pump 8;$null=Snapshot 'browser-silent-paint'
-   if($version -eq 'dynamic'){Assert-Color 0xE8DDD1}
+   if($version -eq 'chameleon'){Assert-Color 0xE8DDD1}
    Pump 8;$null=Snapshot 'browser-final-event';Assert-Color 0xE8DDD1
    [void][ExactProbe]::PostMessage($browserWindow,0x10,[IntPtr]::Zero,[IntPtr]::Zero);$browserWindow=[IntPtr]::Zero;Pump 2
   }

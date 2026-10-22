@@ -65,7 +65,11 @@ protected:
 	{
 		if (key == ACCENT_KEY)
 		{
-			rjh::Deserialize(val, Accent, key, ACCENT_MAP);
+			// Accept old files, but always save the single canonical appearance.
+			if (val.IsString() && (rjh::ValueToStringView(val) == L"dynamic" ||
+				rjh::ValueToStringView(val) == L"dynamic_v2"))
+				Accent = AppearanceAccent::Chameleon;
+			else rjh::Deserialize(val, Accent, key, ACCENT_MAP);
 		}
 		else if (key == COLOR_KEY)
 		{
@@ -108,14 +112,13 @@ protected:
 	}
 
 private:
-	static constexpr std::array<std::wstring_view, 7> ACCENT_MAP = {
+	static constexpr std::array<std::wstring_view, 6> ACCENT_MAP = {
 		L"normal",
 		L"opaque",
 		L"clear",
 		L"blur",
 		L"acrylic",
-		L"dynamic",
-		L"dynamic_v2"
+		L"chameleon"
 	};
 
 	static constexpr std::wstring_view ACCENT_KEY = L"accent";

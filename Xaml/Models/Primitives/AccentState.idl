@@ -7,7 +7,6 @@ namespace TranslucentTB.Xaml.Models.Primitives
 		Clear = 2,
 		Blur = 3,
 		Acrylic = 4,
-		Dynamic = 5,
-		DynamicV2 = 6
+		Chameleon = 5
 	};
 }

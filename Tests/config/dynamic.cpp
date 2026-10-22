@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <format>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "config/taskbarappearance.hpp"
@@ -7,12 +8,12 @@
 // Keep activation factories within a single COM lifetime, like the application.
 class DynamicAppearance : public ::testing::Test {
 protected:
-    static void SetUpTestSuite() { winrt::init_apartment(winrt::apartment_type::multi_threaded); }
-    static void TearDownTestSuite()
-    {
-        winrt::clear_factory_cache();
-        winrt::uninit_apartment();
-    }
+	static void SetUpTestSuite() { winrt::init_apartment(winrt::apartment_type::multi_threaded); }
+	static void TearDownTestSuite()
+	{
+		winrt::clear_factory_cache();
+		winrt::uninit_apartment();
+	}
 };
 
 TEST_F(DynamicAppearance, JsonAndWinrtRoundTrip)
@@ -22,10 +23,10 @@ TEST_F(DynamicAppearance, JsonAndWinrtRoundTrip)
 	ASSERT_FALSE(document.HasParseError());
 	TaskbarAppearance appearance;
 	appearance.Deserialize(document, nullptr);
-	EXPECT_EQ(appearance.Accent, AppearanceAccent::Dynamic);
+	EXPECT_EQ(appearance.Accent, AppearanceAccent::Chameleon);
 	const txmp::TaskbarAppearance model = appearance;
-	EXPECT_EQ(model.Accent(), txmp::AccentState::Dynamic);
-	EXPECT_EQ(TaskbarAppearance(model).Accent, AppearanceAccent::Dynamic);
+	EXPECT_EQ(model.Accent(), txmp::AccentState::Chameleon);
+	EXPECT_EQ(TaskbarAppearance(model).Accent, AppearanceAccent::Chameleon);
 	rj::GenericStringBuffer<rj::UTF16LE<>> buffer;
 	rj::Writer<decltype(buffer), rj::UTF16LE<>, rj::UTF16LE<>> writer(buffer);
 	writer.StartObject(); appearance.Serialize(writer); writer.EndObject();
@@ -33,7 +34,7 @@ TEST_F(DynamicAppearance, JsonAndWinrtRoundTrip)
 	ASSERT_FALSE(document.HasParseError());
 	TaskbarAppearance restored;
 	restored.Deserialize(document, nullptr);
-	EXPECT_EQ(restored.Accent, AppearanceAccent::Dynamic);
+	EXPECT_EQ(restored.Accent, AppearanceAccent::Chameleon);
 	EXPECT_EQ(restored.Color.ToRGBA(), appearance.Color.ToRGBA());
 }
 
@@ -45,26 +46,32 @@ TEST_F(DynamicAppearance, LegacyAndInactiveRules)
 	rule.Deserialize(document, nullptr);
 	EXPECT_EQ(rule.Accent, AppearanceAccent::Clear);
 	ASSERT_TRUE(rule.Inactive);
-	EXPECT_EQ(rule.Inactive->Accent, AppearanceAccent::Dynamic);
+	EXPECT_EQ(rule.Inactive->Accent, AppearanceAccent::Chameleon);
 }
 
-TEST_F(DynamicAppearance, V2JsonAndWinrtRoundTrip)
+TEST_F(DynamicAppearance, LegacyNamesMigrateToChameleon)
 {
-	rj::GenericDocument<rj::UTF16LE<>> document;
-	document.Parse(L"{\"accent\":\"dynamic_v2\",\"color\":\"#203040FF\"}");
-	ASSERT_FALSE(document.HasParseError());
-	TaskbarAppearance appearance;
-	appearance.Deserialize(document, nullptr);
-	EXPECT_EQ(appearance.Accent, AppearanceAccent::DynamicV2);
-	const txmp::TaskbarAppearance model = appearance;
-	EXPECT_EQ(model.Accent(), txmp::AccentState::DynamicV2);
-	EXPECT_EQ(TaskbarAppearance(model).Accent, AppearanceAccent::DynamicV2);
-	rj::GenericStringBuffer<rj::UTF16LE<>> buffer;
-	rj::Writer<decltype(buffer), rj::UTF16LE<>, rj::UTF16LE<>> writer(buffer);
-	writer.StartObject(); appearance.Serialize(writer); writer.EndObject();
-	document.Parse(buffer.GetString());
-	ASSERT_FALSE(document.HasParseError());
-	TaskbarAppearance restored;
-	restored.Deserialize(document, nullptr);
-	EXPECT_EQ(restored.Accent, AppearanceAccent::DynamicV2);
+	for (const auto name : { L"chameleon", L"dynamic", L"dynamic_v2" })
+	{
+		rj::GenericDocument<rj::UTF16LE<>> document;
+		const auto json = std::format(L"{{\"accent\":\"{}\",\"color\":\"#203040FF\"}}",name);
+		document.Parse(json.c_str());
+		ASSERT_FALSE(document.HasParseError());
+		TaskbarAppearance appearance;
+		appearance.Deserialize(document,nullptr);
+		EXPECT_EQ(appearance.Accent,AppearanceAccent::Chameleon);
+		const txmp::TaskbarAppearance model = appearance;
+		EXPECT_EQ(model.Accent(),txmp::AccentState::Chameleon);
+		EXPECT_EQ(TaskbarAppearance(model).Accent,AppearanceAccent::Chameleon);
+		rj::GenericStringBuffer<rj::UTF16LE<>> buffer;
+		rj::Writer<decltype(buffer),rj::UTF16LE<>,rj::UTF16LE<>> writer(buffer);
+		writer.StartObject(); appearance.Serialize(writer); writer.EndObject();
+		document.Parse(buffer.GetString());
+		ASSERT_FALSE(document.HasParseError());
+		EXPECT_STREQ(document[L"accent"].GetString(),L"chameleon");
+		TaskbarAppearance restored;
+		restored.Deserialize(document,nullptr);
+		EXPECT_EQ(restored.Accent,AppearanceAccent::Chameleon);
+		EXPECT_EQ(restored.Color.ToRGBA(),appearance.Color.ToRGBA());
+	}
 }
