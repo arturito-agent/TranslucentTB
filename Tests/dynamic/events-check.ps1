@@ -100,6 +100,17 @@ try {
    $second.BackColor=Color 0x436E99;$first=Snapshot 'same-color-switch-start';$second.Activate();Pump 2
    Assert-Color 0x436E99;$last=Snapshot 'same-color-switch-end';Assert-Settled $first $last 1
    if($first.applications -ne $last.applications -or $first.classic_writes -ne $last.classic_writes){throw 'Same RGB source switch reapplied color'}
+   if($SidesOnly -and $position -eq 'Bottom') {
+    foreach($edge in @('Left','Right','Bottom')) {
+     $expected=if($edge -eq 'Right'){0x436E99}else{0xE8DDD1}
+     $second.BackColor=Color $expected
+     $first=Snapshot ('geometry-'+$edge+'-start');Set-ExperimentTaskbarPosition $edge;Pump 2
+     [void][ExactProbe]::GetWindowRect([ExactProbe]::FindWindow('Shell_TrayWnd',$null),[ref]$bar)
+     $script:pixelX=if($edge -eq 'Bottom'){[int]($bar.Left+3*($bar.Right-$bar.Left)/4)}else{[int](($bar.Left+$bar.Right)/2)}
+     $script:pixelY=[int](($bar.Top+$bar.Bottom)/2)
+     Assert-Color $expected;$last=Snapshot ('geometry-'+$edge+'-end');Assert-Settled $first $last 2
+    }
+   }
    $form.WindowState=[Windows.Forms.FormWindowState]::Normal;$second.WindowState=[Windows.Forms.FormWindowState]::Normal;Pump 1
    $first=Snapshot 'inactive-start';Pump 2;$last=Snapshot 'inactive-end'
    if($first.frames -ne $last.frames -or $last.periodic -or $last.burst -or $last.animation_timer){throw 'Capture survived deactivation'}
