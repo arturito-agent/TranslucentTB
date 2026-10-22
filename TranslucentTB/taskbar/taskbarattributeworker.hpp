@@ -34,6 +34,7 @@
 #include "../managers/configmanager.hpp"
 #include "dynamiccapture.hpp"
 #include "dynamic/transition.hpp"
+#include "dynamic/events.hpp"
 
 enum class TaskbarType {
 	Unknown,
@@ -54,11 +55,18 @@ private:
 		Window WorkerWWindow;
 	};
 
+	struct SampleContext {
+		HWND window;
+		Dynamic::Rect monitor, bar;
+		bool operator==(const SampleContext &) const = default;
+	};
+
 	struct MonitorInfo {
 		TaskbarInfo Taskbar;
 		std::unordered_set<Window> MaximisedWindows;
 		std::unordered_set<Window> NormalWindows;
 		Dynamic::Stability DynamicState;
+		Dynamic::EventSample<SampleContext> DynamicEvent;
 		std::optional<std::uint32_t> DynamicTarget;
 		std::optional<bool> DynamicLine, DynamicPeek;
 		Dynamic::Transition DynamicFade;
@@ -104,7 +112,8 @@ private:
 	bool m_DynamicTimer = false;
 	bool m_DynamicAnimationTimer = false;
 	std::uint64_t m_DynamicDuplicateColors = 0, m_DynamicAnimationFrames = 0;
-	bool m_DynamicFocusTimer = false;
+	ULONGLONG m_DynamicDue = 0;
+	std::uint64_t m_DynamicContexts = 0, m_DynamicChecks = 0, m_DynamicFiltered = 0;
 	bool m_DynamicLocked = false;
 	bool m_DynamicDisplayOff = false;
 	bool m_DynamicSampling = false;
@@ -134,7 +143,6 @@ private:
 	std::uint64_t m_DynamicTimerFailures = 0;
 	wil::unique_hpowernotify m_DynamicDisplayHook;
 	static constexpr UINT_PTR DYNAMIC_TIMER = 0x44594E;
-	static constexpr UINT_PTR DYNAMIC_FOCUS_TIMER = 0x44594F;
 	static constexpr UINT_PTR DYNAMIC_ANIMATION_TIMER = 0x445952;
 	static constexpr UINT_PTR DYNAMIC_RECOVERY_TIMER = 0x445950;
 	bool HasConfiguredDynamic() const;
@@ -142,7 +150,7 @@ private:
 	void UpdateDynamicTimer();
 	std::uint32_t DynamicSchedulerFlags() const noexcept;
 	void ResetDynamicCaptures();
-	void RequestDynamicFocusSample();
+	void ScheduleDynamicSample();
 	void SampleDynamic();
 	void UpdateDynamicAnimationTimer();
 	void StepDynamicAnimations();

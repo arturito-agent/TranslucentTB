@@ -1,5 +1,6 @@
 #include "dynamic/analysis.hpp"
 #include "dynamic/transition.hpp"
+#include "dynamic/events.hpp"
 #include "config/appearanceaccent.hpp"
 #include "dynamic/geometry.hpp"
 #include <cstdlib>
@@ -163,6 +164,21 @@ int main()
 		Check(!fade.active, "identical target creates no animation");
 		Check(IsChameleonAccent(AppearanceAccent::Chameleon), "Chameleon is the only sampled appearance");
 		Check(!IsChameleonAccent(AppearanceAccent::Opaque), "Opaque does not capture");
+		Dynamic::EventSample<int> events;
+		Check(events.Request(1) && events.remaining == 2, "new context schedules a read and optional confirmation");
+		for (int i = 0; i < 300; ++i) events.Request(1);
+		Check(events.remaining == 2, "duplicate burst cannot add reads");
+		events.Consumed(false);
+		Check(events.remaining == 0 && !events.Request(1), "same RGB stops after one read and stays idle");
+		events.Request(2); events.Consumed(true);
+		Check(events.remaining == 1, "new RGB requests one confirmation");
+		for (int i = 0; i < 300; ++i) events.Request(2);
+		events.Consumed(true);
+		Check(events.remaining == 0, "unstable RGB cannot extend captures indefinitely");
+		events.Request(3); events.Consumed(true); events.Request(4);
+		Check(events.context == 4 && events.remaining == 2, "newest context replaces stale pending work");
+		events.Request({});
+		Check(!events.context && events.remaining == 0, "deactivation cancels pending work");
 		std::cout << checks << " Chameleon checks passed\n";
 		return EXIT_SUCCESS;
 	} catch (const std::exception &e) { std::cerr << e.what() << '\n'; return EXIT_FAILURE; }
